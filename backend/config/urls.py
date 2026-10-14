@@ -16,7 +16,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.contrib import admin
+from django.http import JsonResponse
+from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+]
+
+def health(request):
+    return JsonResponse({"status": "ok", "service": "conferencia-backend"})
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/health/', health),
 ]
