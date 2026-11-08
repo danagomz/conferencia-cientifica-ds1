@@ -1,7 +1,9 @@
 from rest_framework.permissions import BasePermission
 
+from .roles import ADMIN, COMITE, nombres_de_roles
+
 # Roles que pueden crear usuarios.
-ROLES_QUE_CREAN_USUARIOS = ('ADMIN', 'COMITE')
+ROLES_QUE_CREAN_USUARIOS = (ADMIN, COMITE)
 
 
 class EsAdminOComite(BasePermission):
@@ -15,4 +17,4 @@ class EsAdminOComite(BasePermission):
             return False
         if usuario.is_superuser:
             return True
-        return usuario.groups.filter(name__in=ROLES_QUE_CREAN_USUARIOS).exists()
+        return bool(nombres_de_roles(usuario) & set(ROLES_QUE_CREAN_USUARIOS))
