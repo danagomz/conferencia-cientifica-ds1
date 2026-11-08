@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import PerfilUsuario
+from .roles import ROLES_VALIDOS, asignar_roles, roles_de, roles_que_puede_asignar
 
 
 class UsuarioCrearSerializer(serializers.Serializer):
@@ -14,6 +15,22 @@ class UsuarioCrearSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     institucion = serializers.CharField(max_length=150)
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=ROLES_VALIDOS),
+        allow_empty=False,
+    )
+
+    def validate_roles(self, valor):
+        # Sin repetidos y respetando lo que puede asignar quien crea la cuenta.
+        roles = list(dict.fromkeys(valor))
+        quien_crea = self.context['request'].user
+        permitidos = roles_que_puede_asignar(quien_crea)
+        no_permitidos = [r for r in roles if r not in permitidos]
+        if no_permitidos:
+            raise serializers.ValidationError(
+                'No tiene permiso para asignar el rol: ' + ', '.join(no_permitidos) + '.'
+            )
+        return roles
 
     def validate_email(self, value):
         correo = value.strip().lower()
@@ -45,6 +62,7 @@ class UsuarioCrearSerializer(serializers.Serializer):
             last_name=datos['last_name'],
         )
         PerfilUsuario.objects.create(usuario=usuario, institucion=datos['institucion'])
+        asignar_roles(usuario, datos['roles'])
         return usuario
 
     def to_representation(self, usuario):
@@ -54,4 +72,5 @@ class UsuarioCrearSerializer(serializers.Serializer):
             'last_name': usuario.last_name,
             'email': usuario.email,
             'institucion': usuario.perfil.institucion,
+            'roles': roles_de(usuario),
         }
