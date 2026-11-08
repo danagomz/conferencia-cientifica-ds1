@@ -1,7 +1,7 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
-from .models import PerfilUsuario
+from .models import PerfilUsuario, Rol, UsuarioRol
 
 URL = '/api/usuarios/'
 DATOS = {
@@ -16,7 +16,8 @@ DATOS = {
 
 def crear_con_rol(correo, rol):
     usuario = User.objects.create_user(correo, correo, 'Clave#12345')
-    usuario.groups.add(Group.objects.get_or_create(name=rol)[0])
+    rol_obj, _ = Rol.objects.get_or_create(nombre_rol=rol, defaults={'descripcion': rol})
+    UsuarioRol.objects.create(usuario=usuario, rol=rol_obj)
     return usuario
 
 
@@ -73,13 +74,14 @@ class CrearUsuarioTests(APITestCase):
         r = self.client.post(URL, {**DATOS, 'roles': ['COMITE']}, format='json')
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data['roles'], ['COMITE'])
-        self.assertTrue(User.objects.get(email=DATOS['email']).groups.filter(name='COMITE').exists())
+        self.assertTrue(UsuarioRol.objects.filter(usuario__email=DATOS['email'], rol__nombre_rol='COMITE').exists())
 
     def test_asigna_varios_roles_sin_repetir(self):
         self.client.force_authenticate(self.admin)
         r = self.client.post(URL, {**DATOS, 'roles': ['COMITE', 'AUTOR', 'AUTOR']}, format='json')
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data['roles'], ['COMITE', 'AUTOR'])
+        self.assertEqual(UsuarioRol.objects.filter(usuario__email=DATOS['email']).count(), 2)
 
     def test_rol_inexistente_se_rechaza(self):
         self.client.force_authenticate(self.admin)
