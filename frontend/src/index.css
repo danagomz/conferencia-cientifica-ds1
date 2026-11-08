@@ -1,2 +1,75 @@
 @import "tailwindcss";
-@plugin "daisyui";
+/* Si usas daisyUI, deja también tu línea:  @plugin "daisyui";  */
+
+/* ───────────────────────────────────────────────────────────
+   TOKENS SEMÁNTICOS
+   Los componentes usan nombres por función (page, brand, fg...)
+   y no hex. Cambiar de paleta = cambiar data-theme en <html>.
+   ─────────────────────────────────────────────────────────── */
+@theme inline {
+  --color-page: var(--sgc-page);              /* fondo de la columna del formulario */
+  --color-panel: var(--sgc-panel);            /* fondo de campos y captcha */
+  --color-fg: var(--sgc-fg);                  /* texto principal */
+  --color-muted: var(--sgc-muted);            /* texto secundario */
+  --color-line: var(--sgc-line);              /* divisores */
+  --color-soft: var(--sgc-soft);              /* manchas y detalles suaves */
+  --color-highlight: var(--sgc-highlight);    /* bordes de campos, foco, detalles */
+  --color-brand: var(--sgc-brand);            /* botón, logo, panel de la foto */
+  --color-brand-fg: var(--sgc-brand-fg);      /* texto sobre brand */
+  --color-brand-hover: var(--sgc-brand-hover);
+  --color-brand-hover-fg: var(--sgc-brand-hover-fg);
+}
+
+@theme {
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-rise: rise 0.6s ease-out both;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+/* Tema A · 02111B  3F4045  30292F  5D737E  FCFCFC */
+:root,
+[data-theme="slate"] {
+  --sgc-page: #FCFCFC;
+  --sgc-panel: #FFFFFF;
+  --sgc-fg: #02111B;
+  --sgc-muted: #3F4045;
+  --sgc-line: color-mix(in srgb, #5D737E 30%, #FCFCFC);
+  --sgc-soft: color-mix(in srgb, #5D737E 20%, #FCFCFC);
+  --sgc-highlight: #5D737E;
+  --sgc-brand: #02111B;
+  --sgc-brand-fg: #FCFCFC;
+  --sgc-brand-hover: #5D737E;
+  --sgc-brand-hover-fg: #FCFCFC;
+}
+
+/* Tema B · E3E7D3  BDC2BF  989C94  25291C  E6E49F */
+[data-theme="olive"] {
+  --sgc-page: #E3E7D3;
+  --sgc-panel: color-mix(in srgb, #E3E7D3 40%, #FFFFFF);
+  --sgc-fg: #25291C;
+  --sgc-muted: color-mix(in srgb, #25291C 75%, #E3E7D3);
+  --sgc-line: #BDC2BF;
+  --sgc-soft: #E6E49F;
+  --sgc-highlight: #989C94;
+  --sgc-brand: #25291C;
+  --sgc-brand-fg: #E6E49F;
+  --sgc-brand-hover: #E6E49F;
+  --sgc-brand-hover-fg: #25291C;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+}
