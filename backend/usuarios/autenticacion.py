@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,11 +22,19 @@ def datos_de_usuario(usuario):
     }
 
 
+class LoginSerializer(serializers.Serializer):
+    """SDGC-99: valida que lleguen el correo (con formato válido) y la contraseña."""
+
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+
 def autenticar(email, password):
-    """Busca al usuario por su correo y comprueba la contraseña. Devuelve el usuario o None."""
-    usuario = User.objects.filter(email__iexact=str(email).strip()).first()
+    """SDGC-99: valida las credenciales. Devuelve el usuario o None."""
+    usuario = User.objects.filter(email__iexact=email.strip()).first()
     if usuario is None:
         return None
+    # authenticate() también rechaza las cuentas desactivadas.
     return authenticate(username=usuario.username, password=password)
 
 
@@ -37,8 +45,11 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        usuario = autenticar(request.data.get('email', ''), request.data.get('password', ''))
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        usuario = autenticar(serializer.validated_data['email'], serializer.validated_data['password'])
         if usuario is None:
+            # Mismo mensaje si el correo no existe o la contraseña es incorrecta.
             return Response(
                 {'detail': 'Correo o contraseña incorrectos.'},
                 status=status.HTTP_401_UNAUTHORIZED,

@@ -34,7 +34,35 @@ class LoginTests(APITestCase):
         r = self.client.post(LOGIN, {'email': 'ANA@Univalle.edu.co', 'password': CLAVE}, format='json')
         self.assertEqual(r.status_code, 200)
 
-    def test_contrasena_incorrecta_no_inicia_sesion(self):
+    # ---- SDGC-99: validación de credenciales ----
+    def test_contrasena_incorrecta(self):
         r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': 'otra'}, format='json')
         self.assertEqual(r.status_code, 401)
+        self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
         self.assertNotIn('access', r.data)
+
+    def test_correo_inexistente_da_el_mismo_mensaje(self):
+        r = self.client.post(LOGIN, {'email': 'nadie@x.co', 'password': CLAVE}, format='json')
+        self.assertEqual(r.status_code, 401)
+        self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
+
+    def test_cuenta_desactivada_no_inicia_sesion(self):
+        crear_usuario('baja@x.co', activo=False)
+        r = self.client.post(LOGIN, {'email': 'baja@x.co', 'password': CLAVE}, format='json')
+        self.assertEqual(r.status_code, 401)
+
+    def test_faltan_campos(self):
+        r = self.client.post(LOGIN, {}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.data)
+        self.assertIn('password', r.data)
+
+    def test_correo_con_formato_invalido(self):
+        r = self.client.post(LOGIN, {'email': 'esto-no-es-un-correo', 'password': CLAVE}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.data)
+
+    def test_contrasena_vacia(self):
+        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': ''}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('password', r.data)
