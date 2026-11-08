@@ -12,7 +12,7 @@ class UsuarioCrearView(APIView):
     permission_classes = [EsAdminOComite]
 
     def post(self, request):
-        serializer = UsuarioCrearSerializer(data=request.data)
+        serializer = UsuarioCrearSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
         return Response(UsuarioCrearSerializer(usuario).data, status=status.HTTP_201_CREATED)
