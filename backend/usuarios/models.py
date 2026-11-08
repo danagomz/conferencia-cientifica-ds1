@@ -26,3 +26,52 @@ class PerfilUsuario(models.Model):
     # Representación del perfil como texto.
     def __str__(self):
         return f"{self.usuario.first_name} {self.usuario.last_name}"
+
+
+# Almacena los roles disponibles en el sistema.
+class Rol(models.Model):
+
+    id_rol = models.AutoField(primary_key=True)
+
+    nombre_rol = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    descripcion = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'rol'
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
+
+    def __str__(self):
+        return self.nombre_rol
+
+
+# Relaciona los usuarios con los roles que tienen asignados.
+class UsuarioRol(models.Model):
+
+    id_usuario_rol = models.AutoField(primary_key=True)
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column='id_usuario',
+        related_name='roles_asignados'
+    )
+
+    rol = models.ForeignKey(
+        Rol,
+        on_delete=models.PROTECT,
+        db_column='id_rol',
+        related_name='usuarios_asignados'
+    )
+
+    class Meta:
+        db_table = 'usuario_rol'
+        verbose_name = 'Rol de usuario'
+        verbose_name_plural = 'Roles de usuarios'
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.rol.nombre_rol}"
