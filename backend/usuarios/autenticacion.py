@@ -1,7 +1,8 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from rest_framework import serializers, status
-from rest_framework.permissions import AllowAny
+from rest_framework import serializers
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,7 +11,7 @@ from .roles import roles_de
 
 
 def datos_de_usuario(usuario):
-    """Datos del usuario que se devuelven al iniciar sesión."""
+    """Datos del usuario que se devuelven al iniciar sesión y en /auth/me/."""
     perfil = getattr(usuario, 'perfil', None)
     return {
         'id': usuario.id,
@@ -23,7 +24,7 @@ def datos_de_usuario(usuario):
 
 
 class LoginSerializer(serializers.Serializer):
-    """SDGC-99: valida que lleguen el correo (con formato válido) y la contraseña."""
+    """SDGC-99: valida que lleguen el correo y la contraseña."""
 
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -54,9 +55,20 @@ class LoginView(APIView):
                 {'detail': 'Correo o contraseña incorrectos.'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+        # SDGC-101: se entregan los tokens de la sesión.
         refresh = RefreshToken.for_user(usuario)
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'usuario': datos_de_usuario(usuario),
         })
+
+
+class UsuarioActualView(APIView):
+    """SDGC-101: GET /api/auth/me/ — devuelve el usuario de la sesión actual."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(datos_de_usuario(request.user))
