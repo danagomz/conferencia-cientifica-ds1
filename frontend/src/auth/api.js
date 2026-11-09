@@ -35,15 +35,25 @@ export async function login({ email, password, captchaToken }) {
     throw new Error('No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.')
   }
 
-  const datos = await respuesta.json().catch(() => null)
-  if (!respuesta.ok) {
-    if (datos === null || respuesta.status >= 500) {
-      throw new Error('El servidor no está disponible. Intenta de nuevo más tarde.')
-    }
-    if (respuesta.status === 400 && datos.email) throw new Error('Ingresa un correo electrónico válido.')
-    throw new Error(datos.detail || 'Correo o contraseña incorrectos.')
+    const datos = await respuesta.json().catch(() => null)
+    if (!respuesta.ok) throw new Error(mensajeDeError(respuesta.status, datos))
+    return leerUsuario(datos ?? {})
+}
+
+// Mensajes del login según lo que responda el backend (CA-040 y CA-041).
+function mensajeDeError(status, datos) {
+  if (datos === null || status >= 500) {
+    return 'El servidor no está disponible. Intenta de nuevo más tarde.'
   }
-  return leerUsuario(datos ?? {})
+  if (datos.captcha_token || datos.captcha) {
+    return 'El CAPTCHA no es válido. Márcalo de nuevo e inténtalo otra vez.'
+  }
+  if (status === 400) {
+    if (datos.email) return 'Ingresa un correo electrónico válido.'
+    if (datos.password) return 'Ingresa tu contraseña.'
+  }
+  if (status === 429) return 'Demasiados intentos. Espera un momento e inténtalo de nuevo.'
+  return datos.detail || 'Correo o contraseña incorrectos.'
 }
 
 // Traduce la respuesta del backend al formato interno.
