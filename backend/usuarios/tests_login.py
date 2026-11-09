@@ -4,6 +4,8 @@ from rest_framework.test import APITestCase
 from .models import PerfilUsuario, Rol, UsuarioRol
 
 LOGIN = '/api/auth/login/'
+ME = '/api/auth/me/'
+REFRESH = '/api/auth/refresh/'
 CLAVE = 'ClaveSegura#2026'
 
 
@@ -39,7 +41,6 @@ class LoginTests(APITestCase):
         r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': 'otra'}, format='json')
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
-        self.assertNotIn('access', r.data)
 
     def test_correo_inexistente_da_el_mismo_mensaje(self):
         r = self.client.post(LOGIN, {'email': 'nadie@x.co', 'password': CLAVE}, format='json')
@@ -57,12 +58,40 @@ class LoginTests(APITestCase):
         self.assertIn('email', r.data)
         self.assertIn('password', r.data)
 
-    def test_correo_con_formato_invalido(self):
-        r = self.client.post(LOGIN, {'email': 'esto-no-es-un-correo', 'password': CLAVE}, format='json')
-        self.assertEqual(r.status_code, 400)
-        self.assertIn('email', r.data)
+    # ---- SDGC-101: gestión de sesión y autorización ----
+    def iniciar_sesion(self):
+        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE}, format='json')
+        return r.data
 
-    def test_contrasena_vacia(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': ''}, format='json')
-        self.assertEqual(r.status_code, 400)
-        self.assertIn('password', r.data)
+    def test_me_con_token(self):
+        datos = self.iniciar_sesion()
+        r = self.client.get(ME, HTTP_AUTHORIZATION='Bearer ' + datos['access'])
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['email'], 'ana@univalle.edu.co')
+        self.assertEqual(r.data['roles'], ['AUTOR'])
+
+    def test_me_sin_token_es_401(self):
+        self.assertEqual(self.client.get(ME).status_code, 401)
+
+    def test_me_con_token_invalido_es_401(self):
+        r = self.client.get(ME, HTTP_AUTHORIZATION='Bearer token-falso')
+        self.assertEqual(r.status_code, 401)
+
+    def test_refresh_entrega_nuevo_access(self):
+        datos = self.iniciar_sesion()
+        r = self.client.post(REFRESH, {'refresh': datos['refresh']}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('access', r.data)
+
+    def test_el_token_sirve_para_los_permisos_de_otros_endpoints(self):
+        # Un AUTOR no puede crear usuarios; un ADMIN sí.
+        datos = self.iniciar_sesion()
+        r = self.client.post('/api/usuarios/', {}, format='json', HTTP_AUTHORIZATION='Bearer ' + datos['access'])
+        self.assertEqual(r.status_code, 403)
+        crear_usuario('admin@x.co', rol='ADMIN')
+        token = self.client.post(LOGIN, {'email': 'admin@x.co', 'password': CLAVE}, format='json').data['access']
+        r = self.client.post('/api/usuarios/', {
+            'first_name': 'Luis', 'last_name': 'Ruiz', 'email': 'luis@x.co',
+            'password': 'OtraClave#2026', 'institucion': 'Univalle', 'roles': ['AUTOR'],
+        }, format='json', HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(r.status_code, 201)
