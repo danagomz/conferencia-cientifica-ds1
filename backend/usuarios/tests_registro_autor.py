@@ -12,7 +12,6 @@ DATOS = {
     'institucion': 'Universidad del Valle',
 }
 
-
 class RegistroAutorTests(APITestCase):
 
     # ---- SDGC-136: endpoint de registro de autor ----
@@ -50,4 +49,65 @@ class RegistroAutorTests(APITestCase):
             self.assertIn(campo, r.data)
         self.assertEqual(PerfilUsuario.objects.count(), 0)
 
-    # (la unicidad del correo y el almacenamiento seguro se refuerzan en SDGC-140 y SDGC-142)
+    # ---- SDGC-140: unicidad del correo electrónico ----
+    def test_correo_ya_registrado_se_rechaza(self):
+        self.client.post(URL, DATOS, format='json')
+        r = self.client.post(URL, {**DATOS, 'first_name': 'Otra'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.data['email'], ['Ya existe una cuenta con este correo.'])
+        self.assertEqual(User.objects.filter(email__iexact=DATOS['email']).count(), 1)
+
+    def test_correo_repetido_con_otras_mayusculas_se_rechaza(self):
+        self.client.post(URL, DATOS, format='json')
+        r = self.client.post(URL, {**DATOS, 'email': 'CARLOS@Univalle.edu.co'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.data)
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_correo_ya_registrado_no_cambia_la_cuenta_existente(self):
+        self.client.post(URL, DATOS, format='json')
+        self.client.post(URL, {**DATOS, 'first_name': 'Intruso', 'password': 'OtraClave#2026'}, format='json')
+        usuario = User.objects.get(email=DATOS['email'])
+        self.assertEqual(usuario.first_name, 'Carlos')
+        self.assertTrue(usuario.check_password(DATOS['password']))
+
+    def test_correo_con_formato_invalido(self):
+        r = self.client.post(URL, {**DATOS, 'email': 'esto-no-es-un-correo'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.data)
+        self.assertEqual(User.objects.count(), 0)
+
+    # ---- SDGC-142: almacenamiento seguro de la contraseña ----
+    def test_la_contrasena_no_se_guarda_en_texto_plano(self):
+        self.client.post(URL, DATOS, format='json')
+        usuario = User.objects.get(email=DATOS['email'])
+        self.assertNotEqual(usuario.password, DATOS['password'])
+        self.assertNotIn(DATOS['password'], usuario.password)
+        # Django guarda "algoritmo$iteraciones$sal$hash", por ejemplo pbkdf2_sha256$...
+        self.assertGreaterEqual(usuario.password.count('$'), 3)
+        self.assertTrue(usuario.check_password(DATOS['password']))
+
+    def test_dos_cuentas_con_la_misma_contrasena_tienen_hash_distinto(self):
+        self.client.post(URL, DATOS, format='json')
+        self.client.post(URL, {**DATOS, 'email': 'otro@univalle.edu.co'}, format='json')
+        hashes = list(User.objects.values_list('password', flat=True))
+        self.assertEqual(len(hashes), 2)
+        self.assertNotEqual(hashes[0], hashes[1])
+
+    def test_la_respuesta_nunca_incluye_la_contrasena_ni_su_hash(self):
+        r = self.client.post(URL, DATOS, format='json')
+        self.assertNotIn('password', r.data)
+        self.assertNotIn(DATOS['password'], str(r.data))
+        self.assertNotIn('pbkdf2', str(r.data))
+
+    def test_contrasena_debil_se_rechaza_y_no_crea_la_cuenta(self):
+        for clave in ('12345678', 'corta', 'password'):
+            r = self.client.post(URL, {**DATOS, 'password': clave}, format='json')
+            self.assertEqual(r.status_code, 400)
+            self.assertIn('password', r.data)
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_contrasena_igual_al_correo_se_rechaza(self):
+        r = self.client.post(URL, {**DATOS, 'password': 'carlos@univalle.edu.co'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('password', r.data)
