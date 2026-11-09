@@ -180,33 +180,28 @@ export function LoginForm({ onSubmit }) {
 
       {/* ───────── Panel de la foto (Derecho) ───────── */}
       <aside className="relative hidden p-4 md:block">
-        <div className="relative h-full min-h-[32rem] overflow-hidden rounded-[2rem] bg-brand">
-          {/* Imagen al 100% de opacidad y sin escala de grises */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-100" 
-            style={{ backgroundImage: `url(${HERO_IMAGE})` }} 
+        <div className="relative h-full min-h-[32rem] overflow-hidden rounded-3xl shadow-2xl">
+          <img
+            src={HERO_IMAGE}
+            alt="Biblioteca"
+            className="absolute inset-0 h-full w-full object-cover object-center"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           
-          {/* Degradado fino en la base inferior */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          
-          {/* Contenedor de Frases e Indicadores de Estado */}
-          <div className="absolute inset-x-0 bottom-0 flex flex-col p-8 lg:p-12 text-brand-fg">
-            <h2 className="font-display text-3xl font-extrabold tracking-tight leading-tight lg:text-4xl text-white">
-              Plataforma de Arbitraje y Evaluación por Pares
+          <div className="absolute bottom-0 left-0 right-0 p-8 text-white sm:p-12">
+            <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Plataforma de Revisión y Evaluación por Pares
             </h2>
-            <p className="mt-3 max-w-md text-sm text-white/90 font-medium">
-              Gestione convocatorias, envíe artículos científicos y consulte dictámenes del comité editorial de forma unificada.
+            <p className="mt-4 max-w-md text-sm text-white/80 leading-relaxed">
+              Gestione convocatorias, envíe artículos científicos y consulte dictámenes del comité de forma unificada.
             </p>
-
-            {/* Badges traslúcidos estilizados */}
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-wide text-white backdrop-blur-md border border-white/20">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="mt-6 flex flex-wrap gap-4 text-xs font-medium">
+              <span className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1.5 text-emerald-400 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Postulación de Artículos Activa
               </span>
-              <span className="inline-flex items-center rounded-full bg-black/40 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-md border border-white/10">
-                Fase de Arbitraje Técnico
+              <span className="rounded-full bg-white/10 px-3 py-1.5 text-white/90 backdrop-blur-sm">
+                Fase de Evaluación Técnica
               </span>
             </div>
           </div>
