@@ -1,7 +1,7 @@
 import { useAuth } from '../auth/useAuth'
 import { ROLES, RUTA_ELEGIR_ROL } from '../auth/roles'
 import { useNavigate } from 'react-router-dom'
-import { Marca } from './Marca'
+import { Marca } from '../components/Marca'
 
 // Pantalla de inicio de cada rol (destino de la redirección, CA-039).
 // Por ahora es un esqueleto: cada historia de usuario irá agregando sus pantallas aquí.

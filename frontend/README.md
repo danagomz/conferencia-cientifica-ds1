@@ -1,16 +1,32 @@
-# React + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz de la Conferencia Científica hecha con React y Vite.
 
-Currently, two official plugins are available:
+## Estructura
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `src/App.jsx`: rutas principales y acceso según sesión y rol.
+- `src/auth/`: inicio de sesión, sesión local y roles.
+- `src/components/`: formulario, marca y CAPTCHA.
+- `src/pages/`: registro de autor, selector de rol y panel de inicio.
+- `src/index.css`: estilos y colores compartidos.
 
-## React Compiler
+La ruta `/registro-autor` contiene el formulario de interfaz. El backend actual no ofrece auto-registro público: `POST /api/usuarios/` está restringido a ADMIN o COMITE. El alta pública requiere un endpoint que valide unicidad y asigne `AUTOR` en el servidor; el formulario no simula que la cuenta se haya creado.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Desarrollo
 
-## Expanding the ESLint configuration
+Desde esta carpeta:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```sh
+npm install
+npm run dev
+```
+
+`npm run build` genera la versión de producción y `npm run lint` revisa el código.
+
+El frontend usa `fetch` para el login. `VITE_API_URL` cambia la dirección base de la API; por defecto es `/api`, que Vite reenvía a Django en `http://127.0.0.1:8000`.
+
+Para probar la interfaz sin servidor, configura `VITE_USE_MOCK=true` en `.env.local`. Las cuentas de demostración usan la contraseña `Demo#12345`.
+
+## Nota sobre CAPTCHA
+
+El CAPTCHA actual solo simula la verificación en pantalla y entrega un token de prueba. No protege contra bots; debe integrarse un proveedor real y validarse su token en el servidor antes de producción.

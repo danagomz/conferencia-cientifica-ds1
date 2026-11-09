@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { ROLES, rutaInicial } from '../auth/roles'
 import { useNavigate } from 'react-router-dom'
-import { Marca } from './Marca'
+import { Marca } from '../components/Marca'
 
 
 // Pantalla para cuentas con más de un rol (CA-042A): el usuario elige con cuál trabaja en esta sesión.

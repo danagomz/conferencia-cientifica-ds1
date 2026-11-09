@@ -2,7 +2,8 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import { useAuth } from './auth/useAuth'
 import { ROLES, RUTA_ELEGIR_ROL, rutaInicial } from './auth/roles'
-import { LoginForm } from './LoginForm'
+import { LoginForm } from './components/LoginForm'
+import { RegistroAutor } from './pages/RegistroAutor'
 import { RoleHome } from './pages/RoleHome'
 import { RoleSelect } from './pages/RoleSelect'
 
@@ -45,6 +46,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<PaginaLogin />} />
+        <Route path="/registro-autor" element={<RegistroAutor />} />
 
         <Route element={<RequiereSesion />}>
           <Route path={RUTA_ELEGIR_ROL} element={<PaginaElegirRol />} />
