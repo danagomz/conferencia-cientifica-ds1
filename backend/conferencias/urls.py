@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import ConferenciaListCreateView, ConferenciaDetailView
+from .views_lineas import LineaTematicaDetailView, LineaTematicaListCreateView
 
 urlpatterns = [
     path(
@@ -12,5 +13,15 @@ urlpatterns = [
         'conferencias/<int:id_conferencia>/',
         ConferenciaDetailView.as_view(),
         name='conferencia-detail'
+    ),
+    path(
+        'conferencias/<int:id_conferencia>/lineas-tematicas/',
+        LineaTematicaListCreateView.as_view(),
+        name='linea-tematica-list-create'
+    ),
+    path(
+        'conferencias/<int:id_conferencia>/lineas-tematicas/<int:id_linea>/',
+        LineaTematicaDetailView.as_view(),
+        name='linea-tematica-detail'
     ),
 ]
