@@ -31,17 +31,11 @@ class Articulo(models.Model):
     titulo = models.CharField(max_length=255)
     resumen = models.TextField()
     palabras_clave = models.TextField()
-
     fecha_postulacion = models.DateTimeField(default=timezone.now)
-
     estado_articulo = models.CharField(max_length=30)
-
     habilitado = models.BooleanField(default=True)
 
-    fecha_deshabilitacion = models.DateTimeField(
-        null=True,
-        blank=True
-    )
+    fecha_deshabilitacion = models.DateTimeField(null=True, blank=True)
 
     id_usuario_deshabilita = models.ForeignKey(
         User,
@@ -58,10 +52,7 @@ class Articulo(models.Model):
         blank=True
     )
 
-    fecha_cesion = models.DateTimeField(
-        null=True,
-        blank=True
-    )
+    fecha_cesion = models.DateTimeField(null=True, blank=True)
 
     id_usuario_carga_cesion = models.ForeignKey(
         User,
@@ -104,16 +95,13 @@ class AutorArticulo(models.Model):
     apellidos = models.CharField(max_length=150)
     email = models.EmailField(max_length=254)
     institucion = models.CharField(max_length=200)
-
     orden_autoria = models.PositiveIntegerField()
-
     es_responsable = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'autor_articulo'
         verbose_name = 'Autor de artículo'
         verbose_name_plural = 'Autores de artículos'
-
         constraints = [
             models.UniqueConstraint(
                 fields=['id_articulo'],
@@ -124,3 +112,38 @@ class AutorArticulo(models.Model):
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos}"
+
+
+class VersionArticulo(models.Model):
+    id_version = models.AutoField(primary_key=True)
+
+    id_articulo = models.ForeignKey(
+        Articulo,
+        on_delete=models.CASCADE,
+        db_column='id_articulo',
+        related_name='versiones'
+    )
+
+    numero_version = models.PositiveIntegerField()
+    tipo_version = models.CharField(max_length=50)
+    archivo_pdf_path = models.CharField(max_length=500)
+    nombre_archivo = models.CharField(max_length=255)
+    tamano_bytes = models.PositiveBigIntegerField()
+    fecha_carga = models.DateTimeField(default=timezone.now)
+
+    id_usuario_carga = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column='id_usuario_carga',
+        related_name='versiones_cargadas'
+    )
+
+    observaciones = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'version_articulo'
+        verbose_name = 'Versión de artículo'
+        verbose_name_plural = 'Versiones de artículos'
+
+    def __str__(self):
+        return f"{self.id_articulo.titulo} - Versión {self.numero_version}"
