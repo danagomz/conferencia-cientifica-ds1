@@ -1,27 +1,26 @@
 from rest_framework import generics
 
-from usuarios.permissions import EsAdminOComite
-
 from .models import Conferencia
+from .permissions import EsAdminOComiteOLecturaAutenticada
 from .serializers import ConferenciaSerializer
 
 
 class ConferenciaListCreateView(generics.ListCreateAPIView):
     """
-    Permite consultar todas las conferencias y registrar una nueva.
+    Cualquier usuario con sesión consulta las conferencias; solo ADMIN o COMITE registran.
     """
 
     queryset = Conferencia.objects.all()
     serializer_class = ConferenciaSerializer
-    permission_classes = [EsAdminOComite]
+    permission_classes = [EsAdminOComiteOLecturaAutenticada]
 
 
 class ConferenciaDetailView(generics.RetrieveUpdateAPIView):
     """
-    Permite consultar y actualizar una conferencia específica.
+    Cualquier usuario con sesión consulta una conferencia; solo ADMIN o COMITE la actualizan.
     """
 
     queryset = Conferencia.objects.all()
     serializer_class = ConferenciaSerializer
-    permission_classes = [EsAdminOComite]
+    permission_classes = [EsAdminOComiteOLecturaAutenticada]
     lookup_field = 'id_conferencia'
