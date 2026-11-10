@@ -1,15 +1,32 @@
+import re
+from datetime import timedelta
 from unittest.mock import patch
 
+from django.core import mail
 from django.contrib.auth.models import User
+from django.test import override_settings
 from rest_framework.test import APITestCase
+from rest_framework.throttling import ScopedRateThrottle
 
-from .models import PerfilUsuario, Rol, UsuarioRol
+from .models import CodigoRecuperacionContrasena, PerfilUsuario, Rol, UsuarioRol
 
 LOGIN = '/api/auth/login/'
 ME = '/api/auth/me/'
 REFRESH = '/api/auth/refresh/'
+SOLICITAR_RECUPERACION = '/api/auth/recuperar-contrasena/'
+RESTABLECER_CONTRASENA = '/api/auth/restablecer-contrasena/'
 CLAVE = 'ClaveSegura#2026'
 CAPTCHA = 'token-captcha-de-prueba'
+
+REST_FRAMEWORK_PRUEBAS = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'password_recovery_request': '100/hour',
+        'password_recovery_reset': '100/minute',
+    },
+}
 
 
 def crear_usuario(correo='ana@univalle.edu.co', rol='AUTOR', activo=True):
@@ -20,7 +37,13 @@ def crear_usuario(correo='ana@univalle.edu.co', rol='AUTOR', activo=True):
     return usuario
 
 
+@override_settings(REST_FRAMEWORK=REST_FRAMEWORK_PRUEBAS)
 class LoginTests(APITestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        ScopedRateThrottle.THROTTLE_RATES.update(REST_FRAMEWORK_PRUEBAS['DEFAULT_THROTTLE_RATES'])
 
     def setUp(self):
         self.usuario = crear_usuario()
@@ -28,9 +51,17 @@ class LoginTests(APITestCase):
         parche.start()
         self.addCleanup(parche.stop)
 
+    @staticmethod
+    def datos_login(correo, contrasena):
+        return {
+            'email': correo,
+            'password': contrasena,
+            'captcha_token': CAPTCHA,
+        }
+
     # ---- SDGC-98: autenticación ----
     def test_login_correcto_entrega_tokens_y_datos(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('ana@univalle.edu.co', CLAVE), format='json')
         self.assertEqual(r.status_code, 200)
         self.assertIn('access', r.data)
         self.assertIn('refresh', r.data)
@@ -39,23 +70,23 @@ class LoginTests(APITestCase):
         self.assertNotIn('password', r.data['usuario'])
 
     def test_login_sin_importar_mayusculas_en_el_correo(self):
-        r = self.client.post(LOGIN, {'email': 'ANA@Univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('ANA@Univalle.edu.co', CLAVE), format='json')
         self.assertEqual(r.status_code, 200)
 
     # ---- SDGC-99: validación de credenciales ----
     def test_contrasena_incorrecta(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': 'otra', 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('ana@univalle.edu.co', 'otra'), format='json')
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
 
     def test_correo_inexistente_da_el_mismo_mensaje(self):
-        r = self.client.post(LOGIN, {'email': 'nadie@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('nadie@x.co', CLAVE), format='json')
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
 
     def test_cuenta_desactivada_no_inicia_sesion(self):
         crear_usuario('baja@x.co', activo=False)
-        r = self.client.post(LOGIN, {'email': 'baja@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('baja@x.co', CLAVE), format='json')
         self.assertEqual(r.status_code, 401)
 
     def test_faltan_campos(self):
@@ -65,9 +96,114 @@ class LoginTests(APITestCase):
         self.assertIn('password', r.data)
         self.assertIn('captcha_token', r.data)
 
+    def test_captcha_invalido_rechaza_el_inicio_de_sesion(self):
+        with patch('usuarios.autenticacion.captcha_es_valido', return_value=False):
+            r = self.client.post(
+                LOGIN,
+                self.datos_login('ana@univalle.edu.co', CLAVE),
+                format='json',
+            )
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('captcha_token', r.data)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_solicitar_recuperacion_envia_pin_y_respuesta_no_revela_cuenta(self):
+        respuesta = self.client.post(
+            SOLICITAR_RECUPERACION,
+            {'email': 'ANA@Univalle.edu.co'},
+            format='json',
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['ana@univalle.edu.co'])
+        pin = re.search(r'\b\d{6}\b', mail.outbox[0].body).group()
+        codigo = CodigoRecuperacionContrasena.objects.get(usuario=self.usuario)
+        self.assertNotEqual(codigo.codigo_hash, pin)
+
+        respuesta_inexistente = self.client.post(
+            SOLICITAR_RECUPERACION,
+            {'email': 'nadie@univalle.edu.co'},
+            format='json',
+        )
+        self.assertEqual(respuesta_inexistente.status_code, 200)
+        self.assertEqual(respuesta.data, respuesta_inexistente.data)
+        self.assertEqual(len(mail.outbox), 1)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_pin_correcto_cambia_contrasena_y_se_invalida(self):
+        self.client.post(
+            SOLICITAR_RECUPERACION,
+            {'email': self.usuario.email},
+            format='json',
+        )
+        pin = re.search(r'\b\d{6}\b', mail.outbox[0].body).group()
+        nueva = 'NuevaClaveSegura#2026'
+
+        respuesta = self.client.post(
+            RESTABLECER_CONTRASENA,
+            {'email': self.usuario.email, 'pin': pin, 'password': nueva},
+            format='json',
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password(nueva))
+
+        respuesta_reutilizada = self.client.post(
+            RESTABLECER_CONTRASENA,
+            {'email': self.usuario.email, 'pin': pin, 'password': nueva},
+            format='json',
+        )
+        self.assertEqual(respuesta_reutilizada.status_code, 400)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_pin_incorrecto_agota_intentos(self):
+        self.client.post(
+            SOLICITAR_RECUPERACION,
+            {'email': self.usuario.email},
+            format='json',
+        )
+        pin_enviado = re.search(r'\b\d{6}\b', mail.outbox[0].body).group()
+        pin_incorrecto = '000000' if pin_enviado != '000000' else '000001'
+        for _ in range(5):
+            respuesta = self.client.post(
+                RESTABLECER_CONTRASENA,
+                {
+                    'email': self.usuario.email,
+                    'pin': pin_incorrecto,
+                    'password': 'NuevaClaveSegura#2026',
+                },
+                format='json',
+            )
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(CodigoRecuperacionContrasena.objects.get(usuario=self.usuario).intentos, 5)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_pin_vencido_no_permite_cambiar_contrasena(self):
+        self.client.post(
+            SOLICITAR_RECUPERACION,
+            {'email': self.usuario.email},
+            format='json',
+        )
+        codigo = CodigoRecuperacionContrasena.objects.get(usuario=self.usuario)
+        codigo.expira_en = codigo.creado_en - timedelta(seconds=1)
+        codigo.save(update_fields=['expira_en'])
+
+        respuesta = self.client.post(
+            RESTABLECER_CONTRASENA,
+            {
+                'email': self.usuario.email,
+                'pin': re.search(r'\b\d{6}\b', mail.outbox[0].body).group(),
+                'password': 'NuevaClaveSegura#2026',
+            },
+            format='json',
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password(CLAVE))
+
     # ---- SDGC-101: gestión de sesión y autorización ----
     def iniciar_sesion(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
+        r = self.client.post(LOGIN, self.datos_login('ana@univalle.edu.co', CLAVE), format='json')
         return r.data
 
     def test_me_con_token(self):
@@ -96,7 +232,11 @@ class LoginTests(APITestCase):
         r = self.client.post('/api/usuarios/', {}, format='json', HTTP_AUTHORIZATION='Bearer ' + datos['access'])
         self.assertEqual(r.status_code, 403)
         crear_usuario('admin@x.co', rol='ADMIN')
-        token = self.client.post(LOGIN, {'email': 'admin@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json').data['access']
+        token = self.client.post(
+            LOGIN,
+            self.datos_login('admin@x.co', CLAVE),
+            format='json',
+        ).data['access']
         r = self.client.post('/api/usuarios/', {
             'first_name': 'Luis', 'last_name': 'Ruiz', 'email': 'luis@x.co',
             'password': 'OtraClave#2026', 'institucion': 'Univalle', 'roles': ['AUTOR'],

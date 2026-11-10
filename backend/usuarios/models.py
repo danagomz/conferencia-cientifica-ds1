@@ -3,6 +3,23 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class CodigoRecuperacionContrasena(models.Model):
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='codigos_recuperacion',
+    )
+    codigo_hash = models.CharField(max_length=128)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    expira_en = models.DateTimeField()
+    intentos = models.PositiveSmallIntegerField(default=0)
+    usado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'codigo_recuperacion_contrasena'
+        ordering = ['-creado_en']
+
+
 # Almacena los datos complementarios del usuario.
 class PerfilUsuario(models.Model):
 

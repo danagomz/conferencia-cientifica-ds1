@@ -11,6 +11,44 @@ from usuarios.models import PerfilUsuario
 from .models import Articulo, AutorArticulo
 
 URL = '/api/articulos/'
+URL_CONTEXTO = '/api/articulos/contexto/'
+
+
+class ContextoArticuloTests(APITestCase):
+
+    def test_autor_consulta_convocatorias_abiertas_y_su_perfil(self):
+        conferencia = crear_conferencia()
+        conferencia.estado = 'ACTIVA'
+        conferencia.save(update_fields=['estado'])
+        linea = LineaTematica.objects.create(id_conferencia=conferencia, nombre='Inteligencia artificial')
+        ahora = timezone.now()
+        Plazo.objects.create(
+            id_conferencia=conferencia,
+            tipo_plazo=Plazo.POSTULACION,
+            fecha_inicio=ahora - timedelta(days=1),
+            fecha_fin=ahora + timedelta(days=5),
+        )
+        autor = usuario_con_rol('autora@x.co', 'AUTOR')
+        self.client.force_authenticate(autor)
+
+        respuesta = self.client.get(URL_CONTEXTO)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data['autor_actual']['email'], autor.email)
+        self.assertEqual(respuesta.data['convocatorias'][0]['id'], conferencia.id_conferencia)
+        self.assertTrue(respuesta.data['convocatorias'][0]['postulaciones_abiertas'])
+        self.assertEqual(
+            respuesta.data['convocatorias'][0]['lineas_tematicas'],
+            [{'id': linea.id_linea, 'nombre': linea.nombre}],
+        )
+
+    def test_contexto_requiere_rol_autor(self):
+        usuario = usuario_con_rol('comite@x.co', 'COMITE')
+        self.client.force_authenticate(usuario)
+
+        respuesta = self.client.get(URL_CONTEXTO)
+
+        self.assertEqual(respuesta.status_code, 403)
 
 
 class RegistrarArticuloTests(APITestCase):

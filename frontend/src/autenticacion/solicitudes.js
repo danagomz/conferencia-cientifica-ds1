@@ -18,6 +18,129 @@ const URL_API = import.meta.env.VITE_API_URL ?? '/api'
 
 const RUTA_INICIO_SESION = `${URL_API}/auth/login/`
 const RUTA_REGISTRO_AUTOR = `${URL_API}/auth/registro-autor/`
+const RUTA_SOLICITAR_RECUPERACION = `${URL_API}/auth/recuperar-contrasena/`
+const RUTA_RESTABLECER_CONTRASENA = `${URL_API}/auth/restablecer-contrasena/`
+const RUTA_CONTEXTO_ARTICULOS = `${URL_API}/articulos/contexto/`
+const RUTA_REGISTRAR_ARTICULO = `${URL_API}/articulos/`
+
+export async function obtenerContextoArticulos(token) {
+  let respuesta
+  try {
+    respuesta = await fetch(RUTA_CONTEXTO_ARTICULOS, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+  }
+
+  const datos = await respuesta.json().catch(() => null)
+  if (!respuesta.ok) {
+    throw new Error(mensajeErrorApi(datos, 'No se pudo cargar la información de la convocatoria.'))
+  }
+  return datos
+}
+
+export async function registrarArticulo({
+  token,
+  titulo,
+  resumen,
+  palabrasClave,
+  convocatoriaId,
+  lineaTematica,
+  autores,
+}) {
+  let respuesta
+  try {
+    respuesta = await fetch(RUTA_REGISTRAR_ARTICULO, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        id_conferencia: Number(convocatoriaId),
+        id_linea: Number(lineaTematica),
+        titulo: titulo.trim(),
+        resumen: resumen.trim(),
+        palabras_clave: palabrasClave.trim(),
+        coautores: autores.slice(1).map(({ nombres, apellidos, email, institucion, responsable }) => ({
+          nombres: nombres.trim(),
+          apellidos: apellidos.trim(),
+          email: email.trim().toLowerCase(),
+          institucion: institucion.trim(),
+          es_responsable: responsable,
+        })),
+      }),
+    })
+  } catch {
+    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+  }
+
+  const datos = await respuesta.json().catch(() => null)
+  if (!respuesta.ok) {
+    throw new Error(mensajeErrorApi(datos, 'No se pudo registrar el artículo. Revisa los datos e inténtalo otra vez.'))
+  }
+  return datos
+}
+
+function mensajeErrorApi(datos, predeterminado) {
+  if (typeof datos?.detail === 'string') return datos.detail
+  const mensajes = []
+  function recopilar(valor) {
+    if (typeof valor === 'string') mensajes.push(valor)
+    else if (Array.isArray(valor)) valor.forEach(recopilar)
+    else if (valor && typeof valor === 'object') Object.values(valor).forEach(recopilar)
+  }
+  recopilar(datos)
+  return mensajes.join(' ') || predeterminado
+}
+
+export async function solicitarCodigoRecuperacion(correo) {
+  let respuesta
+  try {
+    respuesta = await fetch(RUTA_SOLICITAR_RECUPERACION, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: correo.trim().toLowerCase() }),
+    })
+  } catch {
+    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+  }
+
+  const datos = await respuesta.json().catch(() => null)
+  if (!respuesta.ok) {
+    throw new Error(
+      datos?.detail || 'No se pudo enviar el PIN. Intenta de nuevo más tarde.',
+    )
+  }
+  return datos
+}
+
+export async function restablecerContrasena({ correo, pin, contrasena }) {
+  let respuesta
+  try {
+    respuesta = await fetch(RUTA_RESTABLECER_CONTRASENA, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: correo.trim().toLowerCase(),
+        pin: pin.trim(),
+        password: contrasena,
+      }),
+    })
+  } catch {
+    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+  }
+
+  const datos = await respuesta.json().catch(() => null)
+  if (!respuesta.ok) {
+    const errores = datos && typeof datos === 'object' ? Object.values(datos).flat() : []
+    throw new Error(
+      errores.join(' ') || 'No se pudo actualizar la contraseña. Revisa el PIN e inténtalo otra vez.',
+    )
+  }
+  return datos
+}
 
 export async function registrarAutor({ nombre, apellido, correo, contrasena, institucion }) {
   let respuesta
