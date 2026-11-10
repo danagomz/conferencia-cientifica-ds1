@@ -6,7 +6,9 @@ from rest_framework.test import APITestCase
 from conferencias.models import LineaTematica, Plazo
 from conferencias.tests_lineas import crear_conferencia, usuario_con_rol
 
-from .models import Articulo
+from usuarios.models import PerfilUsuario
+
+from .models import Articulo, AutorArticulo
 
 URL = '/api/articulos/'
 
@@ -119,3 +121,38 @@ class RegistrarArticuloTests(APITestCase):
         r = self.client.post(URL, self.datos, format='json')
         self.assertEqual(r.status_code, 400)
 
+    # ---- SDGC-129: asociación del artículo con su autor ----
+    def test_articulo_queda_asociado_al_autor_responsable(self):
+        self.autor.first_name, self.autor.last_name = 'Ana', 'Pérez'
+        self.autor.save()
+        PerfilUsuario.objects.create(usuario=self.autor, institucion='Univalle')
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 201)
+        autores = AutorArticulo.objects.filter(id_articulo=r.data['id_articulo'])
+        self.assertEqual(autores.count(), 1)
+        a = autores.first()
+        self.assertEqual(a.id_usuario, self.autor)
+        self.assertEqual((a.nombres, a.apellidos), ('Ana', 'Pérez'))
+        self.assertEqual(a.email, 'autor@x.co')
+        self.assertEqual(a.institucion, 'Univalle')
+        self.assertEqual(a.orden_autoria, 1)
+        self.assertTrue(a.es_responsable)
+
+    def test_respuesta_incluye_el_autor(self):
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(len(r.data['autores']), 1)
+        self.assertTrue(r.data['autores'][0]['es_responsable'])
+
+    def test_autor_sin_perfil_no_rompe_el_registro(self):
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['autores'][0]['institucion'], '')
+
+    def test_articulo_rechazado_no_deja_autores_huerfanos(self):
+        self.client.force_authenticate(self.autor)
+        self.plazo.delete()
+        self.client.post(URL, self.datos, format='json')
+        self.assertEqual(AutorArticulo.objects.count(), 0)

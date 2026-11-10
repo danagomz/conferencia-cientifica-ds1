@@ -1,9 +1,10 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
 from conferencias.models import Conferencia, LineaTematica, Plazo
 
-from .models import Articulo
+from .models import Articulo, AutorArticulo
 
 ESTADO_INICIAL = 'REGISTRADO'
 
@@ -13,12 +14,13 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
 
     id_conferencia = serializers.PrimaryKeyRelatedField(queryset=Conferencia.objects.all())
     id_linea = serializers.PrimaryKeyRelatedField(queryset=LineaTematica.objects.all())
+    autores = serializers.SerializerMethodField()
 
     class Meta:
         model = Articulo
         fields = [
             'id_articulo', 'id_conferencia', 'id_linea', 'titulo', 'resumen',
-            'palabras_clave', 'estado_articulo', 'fecha_postulacion',
+            'palabras_clave', 'estado_articulo', 'fecha_postulacion', 'autores',
         ]
         read_only_fields = ['id_articulo', 'estado_articulo', 'fecha_postulacion']
 
@@ -56,9 +58,38 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
                 {'id_conferencia': 'El plazo de postulación ya venció.'}
             )
 
+    def get_autores(self, articulo):
+        return [
+            {
+                'id_usuario': a.id_usuario_id,
+                'nombres': a.nombres,
+                'apellidos': a.apellidos,
+                'email': a.email,
+                'institucion': a.institucion,
+                'orden_autoria': a.orden_autoria,
+                'es_responsable': a.es_responsable,
+            }
+            for a in articulo.autores.order_by('orden_autoria')
+        ]
+
     def create(self, datos):
-        return Articulo.objects.create(
-            id_usuario_registra=self.context['request'].user,
-            estado_articulo=ESTADO_INICIAL,
-            **datos,
-        )
+        """Crea el artículo y lo asocia a quien lo registra como autor responsable (SDGC-129)."""
+        usuario = self.context['request'].user
+        with transaction.atomic():
+            articulo = Articulo.objects.create(
+                id_usuario_registra=usuario,
+                estado_articulo=ESTADO_INICIAL,
+                **datos,
+            )
+            perfil = getattr(usuario, 'perfil', None)
+            AutorArticulo.objects.create(
+                id_articulo=articulo,
+                id_usuario=usuario,
+                nombres=usuario.first_name,
+                apellidos=usuario.last_name,
+                email=usuario.email,
+                institucion=perfil.institucion if perfil else '',
+                orden_autoria=1,
+                es_responsable=True,
+            )
+        return articulo
