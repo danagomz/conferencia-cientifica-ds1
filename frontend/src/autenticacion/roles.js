@@ -1,24 +1,24 @@
 // Roles del sistema y su pantalla de inicio.
 // Los nombres coinciden con los grupos de Django (ADMIN, COMITE, AUTOR).
-// Para agregar un rol nuevo: añadirlo aquí y listo (login, selector y guardas lo reconocen).
+// Para agregar un rol: añadirlo aquí y el inicio de sesión, selector y guardas lo reconocerán.
 
-export const ROLES = {
+export const ROLES_DISPONIBLES = {
   ADMIN: {
-    label: 'Administrador',
+    nombre: 'Administrador',
     descripcion: 'Gestiona usuarios y la configuración de la conferencia.',
-    home: '/admin',
+    rutaInicio: '/admin',
     funciones: ['Crear usuarios y asignar roles'],
   },
   COMITE: {
-    label: 'Comité científico',
+    nombre: 'Comité científico',
     descripcion: 'Registra usuarios y gestiona la evaluación de los artículos.',
-    home: '/comite',
+    rutaInicio: '/comite',
     funciones: ['Crear usuarios con los roles autorizados'],
   },
   AUTOR: {
-    label: 'Autor',
+    nombre: 'Autor',
     descripcion: 'Postula artículos a la conferencia y gestiona sus versiones.',
-    home: '/autor',
+    rutaInicio: '/autor',
     funciones: ['Registrar un artículo con sus autores y línea temática'],
   },
 }
@@ -27,21 +27,19 @@ export const ROLES = {
 export const RUTA_ELEGIR_ROL = '/elegir-rol'
 
 // Convierte lo que mande el backend ('autor', 'AUTOR', ' Autor ') en una clave válida.
-// Los roles desconocidos se descartan: nunca se da acceso a algo que el front no conoce.
+// Los roles desconocidos se descartan: nunca se da acceso a algo que el frontend no conoce.
 export function normalizarRoles(roles) {
   const lista = Array.isArray(roles) ? roles : []
   const claves = lista
-    .map((r) => String(r).trim().toUpperCase())
-    .filter((r) => Object.hasOwn(ROLES, r))
+    .map((rol) => String(rol).trim().toUpperCase())
+    .filter((rol) => Object.hasOwn(ROLES_DISPONIBLES, rol))
   return [...new Set(claves)]
 }
-
-
 // A dónde debe ir una sesión recién creada o ya existente (CA-038 y CA-039):
 //  - con rol elegido  → la pantalla de ese rol
 //  - con varios roles → el selector
-export function rutaInicial(session) {
-  if (!session) return '/login'
-  if (session.activeRole) return ROLES[session.activeRole].home
+export function rutaInicial(sesion) {
+  if (!sesion) return '/login'
+  if (sesion.rolActivo) return ROLES_DISPONIBLES[sesion.rolActivo].rutaInicio
   return RUTA_ELEGIR_ROL
 }

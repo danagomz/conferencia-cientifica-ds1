@@ -1,62 +1,58 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from './auth/AuthProvider'
-import { useAuth } from './auth/useAuth'
-import { ROLES, RUTA_ELEGIR_ROL, rutaInicial } from './auth/roles'
-import { LoginForm } from './LoginForm'
-import { RoleHome } from './pages/RoleHome'
-import { RoleSelect } from './pages/RoleSelect'
+import { ProveedorAutenticacion } from './autenticacion/ProveedorAutenticacion'
+import { useAutenticacion } from './autenticacion/useAutenticacion'
+import { ROLES_DISPONIBLES, RUTA_ELEGIR_ROL, rutaInicial } from './autenticacion/roles'
+import { FormularioInicioSesion } from './components/FormularioInicioSesion'
+import { RegistroAutor } from './pages/RegistroAutor'
+import { InicioRol } from './pages/InicioRol'
+import { SelectorRol } from './pages/SelectorRol'
 
-// Login: al autenticarse la sesión cambia y este componente redirige según el rol (SDGC-102).
-function PaginaLogin() {
-  const { session, login } = useAuth()
-  if (session) return <Navigate to={rutaInicial(session)} replace />
-  return <LoginForm onSubmit={(credenciales) => login(credenciales)} />
+function PaginaInicioSesion() {
+  const { sesion, iniciarSesion } = useAutenticacion()
+  if (sesion) return <Navigate to={rutaInicial(sesion)} replace />
+  return <FormularioInicioSesion alEnviar={iniciarSesion} />
 }
 
-// Guarda: sin sesión, solo el login.
 function RequiereSesion() {
-  const { session } = useAuth()
-  return session ? <Outlet /> : <Navigate to="/login" replace />
+  const { sesion } = useAutenticacion()
+  return sesion ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-// Selector de rol: solo para cuentas con varios roles (CA-042A).
-function PaginaElegirRol() {
-  const { session } = useAuth()
-  return session.roles.length > 1 ? <RoleSelect /> : <Navigate to={rutaInicial(session)} replace />
+function PaginaSeleccionRol() {
+  const { sesion } = useAutenticacion()
+  return sesion.roles.length > 1 ? <SelectorRol /> : <Navigate to={rutaInicial(sesion)} replace />
 }
 
-// Cada ruta de rol solo la ve quien tiene ese rol activo (CA-042B).
-function SoloRol({ rol }) {
-  const { session } = useAuth()
-  if (!session.activeRole) return <Navigate to={RUTA_ELEGIR_ROL} replace />
-  if (session.activeRole !== rol) return <Navigate to={rutaInicial(session)} replace />
-  return <RoleHome rol={rol} />
+function PaginaSoloRol({ rol }) {
+  const { sesion } = useAutenticacion()
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />
+  if (sesion.rolActivo !== rol) return <Navigate to={rutaInicial(sesion)} replace />
+  return <InicioRol rol={rol} />
 }
 
-// "/" y rutas desconocidas: a donde corresponda.
 function RedireccionInicial() {
-  const { session } = useAuth()
-  return <Navigate to={session ? rutaInicial(session) : '/login'} replace />
+  const { sesion } = useAutenticacion()
+  return <Navigate to={sesion ? rutaInicial(sesion) : '/login'} replace />
 }
 
-// OJO: esto es solo experiencia de usuario. Los permisos reales deben validarse en el backend (SDGC-101).
-function App() {
+function Aplicacion() {
   return (
-    <AuthProvider>
+    <ProveedorAutenticacion>
       <Routes>
-        <Route path="/login" element={<PaginaLogin />} />
+        <Route path="/login" element={<PaginaInicioSesion />} />
+        <Route path="/registro-autor" element={<RegistroAutor />} />
 
         <Route element={<RequiereSesion />}>
-          <Route path={RUTA_ELEGIR_ROL} element={<PaginaElegirRol />} />
-          {Object.entries(ROLES).map(([rol, info]) => (
-            <Route key={rol} path={info.home} element={<SoloRol rol={rol} />} />
+          <Route path={RUTA_ELEGIR_ROL} element={<PaginaSeleccionRol />} />
+          {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
+            <Route key={rol} path={informacion.rutaInicio} element={<PaginaSoloRol rol={rol} />} />
           ))}
         </Route>
 
         <Route path="*" element={<RedireccionInicial />} />
       </Routes>
-    </AuthProvider>
+    </ProveedorAutenticacion>
   )
 }
 
-export default App
+export default Aplicacion
