@@ -32,4 +32,5 @@ urlpatterns = [
     path('api/', include('usuarios.urls')),
     path('api/', include('usuarios.urls_auth')),
     path('api/', include('conferencias.urls')),
+    path('api/', include('articulos.urls')),
 ]
