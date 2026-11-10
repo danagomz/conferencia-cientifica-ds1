@@ -9,24 +9,37 @@ from .models import Articulo, AutorArticulo
 ESTADO_INICIAL = 'REGISTRADO'
 
 
+class CoautorSerializer(serializers.Serializer):
+    """Coautor del artículo; no necesita cuenta en el sistema (CA-060B, CA-060D)."""
+
+    nombres = serializers.CharField(max_length=150)
+    apellidos = serializers.CharField(max_length=150)
+    email = serializers.EmailField(max_length=254)
+    institucion = serializers.CharField(max_length=200)
+    es_responsable = serializers.BooleanField(required=False, default=False)
+
+
 class ArticuloCrearSerializer(serializers.ModelSerializer):
     """Datos para registrar un artículo (HU-008, SDGC-122)."""
 
     id_conferencia = serializers.PrimaryKeyRelatedField(queryset=Conferencia.objects.all())
     id_linea = serializers.PrimaryKeyRelatedField(queryset=LineaTematica.objects.all())
+
     autores = serializers.SerializerMethodField()
+    coautores = CoautorSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = Articulo
         fields = [
             'id_articulo', 'id_conferencia', 'id_linea', 'titulo', 'resumen',
-            'palabras_clave', 'estado_articulo', 'fecha_postulacion', 'autores',
+            'palabras_clave', 'estado_articulo', 'fecha_postulacion', 'autores', 'coautores',
         ]
         read_only_fields = ['id_articulo', 'estado_articulo', 'fecha_postulacion']
 
     def validate(self, datos):
         conferencia = datos['id_conferencia']
         self._validar_plazo_postulacion(conferencia)
+        self._validar_coautores(datos.get('coautores', []))
         linea = datos['id_linea']
         if linea.id_conferencia_id != conferencia.id_conferencia:
             raise serializers.ValidationError(
@@ -37,6 +50,19 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
                 {'id_linea': 'La línea temática no está habilitada.'}
             )
         return datos
+
+    @staticmethod
+    def _validar_coautores(coautores):
+        """Máximo un responsable y sin correos repetidos (CA-060A, CA-060C)."""
+        if sum(1 for c in coautores if c['es_responsable']) > 1:
+            raise serializers.ValidationError(
+                {'coautores': 'Solo un autor puede ser el responsable de las versiones.'}
+            )
+        correos = [c['email'].lower() for c in coautores]
+        if len(correos) != len(set(correos)):
+            raise serializers.ValidationError(
+                {'coautores': 'Hay correos repetidos entre los coautores.'}
+            )
 
     @staticmethod
     def _validar_plazo_postulacion(conferencia):
@@ -73,8 +99,19 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, datos):
-        """Crea el artículo y lo asocia a quien lo registra como autor responsable (SDGC-129)."""
+        """Crea el artículo y sus autores: quien registra (SDGC-129) más los coautores.
+
+        Quien registra es el autor 1 y queda como responsable, salvo que un
+        coautor venga marcado como responsable de las versiones.
+        """
         usuario = self.context['request'].user
+        coautores = datos.pop('coautores', [])
+        responsable_es_coautor = any(c['es_responsable'] for c in coautores)
+        correos = [usuario.email.lower()] + [c['email'].lower() for c in coautores]
+        if len(correos) != len(set(correos)):
+            raise serializers.ValidationError(
+                {'coautores': 'Un coautor no puede repetir el correo de quien registra.'}
+            )
         with transaction.atomic():
             articulo = Articulo.objects.create(
                 id_usuario_registra=usuario,
@@ -90,6 +127,17 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
                 email=usuario.email,
                 institucion=perfil.institucion if perfil else '',
                 orden_autoria=1,
-                es_responsable=True,
+                es_responsable=not responsable_es_coautor,
             )
+            for orden, c in enumerate(coautores, start=2):
+                AutorArticulo.objects.create(
+                    id_articulo=articulo,
+                    id_usuario=None,
+                    nombres=c['nombres'],
+                    apellidos=c['apellidos'],
+                    email=c['email'],
+                    institucion=c['institucion'],
+                    orden_autoria=orden,
+                    es_responsable=c['es_responsable'],
+                )
         return articulo

@@ -156,3 +156,61 @@ class RegistrarArticuloTests(APITestCase):
         self.plazo.delete()
         self.client.post(URL, self.datos, format='json')
         self.assertEqual(AutorArticulo.objects.count(), 0)
+
+    # ---- CA-060A..D: varios autores, responsable y coautores sin cuenta ----
+    def coautor(self, correo='co@x.co', **extra):
+        d = {'nombres': 'Luis', 'apellidos': 'Gil', 'email': correo, 'institucion': 'UNAL'}
+        d.update(extra)
+        return d
+
+    def test_registra_varios_autores_sin_cuenta(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [self.coautor('a@x.co'), self.coautor('b@x.co', nombres='Eva')]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 201)
+        autores = list(AutorArticulo.objects.filter(id_articulo=r.data['id_articulo']).order_by('orden_autoria'))
+        self.assertEqual(len(autores), 3)
+        self.assertEqual([a.orden_autoria for a in autores], [1, 2, 3])
+        self.assertIsNone(autores[1].id_usuario)
+        self.assertEqual((autores[1].nombres, autores[1].email, autores[1].institucion),
+                         ('Luis', 'a@x.co', 'UNAL'))
+        self.assertTrue(autores[0].es_responsable)
+        self.assertEqual(sum(a.es_responsable for a in autores), 1)
+
+    def test_un_coautor_puede_ser_el_responsable(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [self.coautor('a@x.co', es_responsable=True), self.coautor('b@x.co')]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 201)
+        resp = AutorArticulo.objects.filter(id_articulo=r.data['id_articulo'], es_responsable=True)
+        self.assertEqual(resp.count(), 1)
+        self.assertEqual(resp.first().email, 'a@x.co')
+
+    def test_dos_responsables_se_rechazan(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [self.coautor('a@x.co', es_responsable=True),
+                                   self.coautor('b@x.co', es_responsable=True)]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Articulo.objects.count(), 0)
+
+    def test_coautor_con_datos_incompletos_se_rechaza(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [{'nombres': 'Luis', 'email': 'no-es-correo'}]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        for campo in ('apellidos', 'email', 'institucion'):
+            self.assertIn(campo, r.data['coautores'][0])
+
+    def test_correos_repetidos_se_rechazan(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [self.coautor('a@x.co'), self.coautor('A@x.co')]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_coautor_con_el_correo_de_quien_registra_se_rechaza(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [self.coautor('autor@x.co')]
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Articulo.objects.count(), 0)
