@@ -144,6 +144,10 @@ SIMPLE_JWT = {
 }
 
 
+# CAPTCHA del inicio de sesión (Cloudflare Turnstile)
+TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

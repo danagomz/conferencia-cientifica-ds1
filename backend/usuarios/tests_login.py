@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -7,6 +9,7 @@ LOGIN = '/api/auth/login/'
 ME = '/api/auth/me/'
 REFRESH = '/api/auth/refresh/'
 CLAVE = 'ClaveSegura#2026'
+CAPTCHA = 'token-captcha-de-prueba'
 
 
 def crear_usuario(correo='ana@univalle.edu.co', rol='AUTOR', activo=True):
@@ -21,10 +24,13 @@ class LoginTests(APITestCase):
 
     def setUp(self):
         self.usuario = crear_usuario()
+        parche = patch('usuarios.autenticacion.captcha_es_valido', return_value=True)
+        parche.start()
+        self.addCleanup(parche.stop)
 
     # ---- SDGC-98: autenticación ----
     def test_login_correcto_entrega_tokens_y_datos(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE}, format='json')
+        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
         self.assertEqual(r.status_code, 200)
         self.assertIn('access', r.data)
         self.assertIn('refresh', r.data)
@@ -33,23 +39,23 @@ class LoginTests(APITestCase):
         self.assertNotIn('password', r.data['usuario'])
 
     def test_login_sin_importar_mayusculas_en_el_correo(self):
-        r = self.client.post(LOGIN, {'email': 'ANA@Univalle.edu.co', 'password': CLAVE}, format='json')
+        r = self.client.post(LOGIN, {'email': 'ANA@Univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
         self.assertEqual(r.status_code, 200)
 
     # ---- SDGC-99: validación de credenciales ----
     def test_contrasena_incorrecta(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': 'otra'}, format='json')
+        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': 'otra', 'captcha_token': CAPTCHA}, format='json')
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
 
     def test_correo_inexistente_da_el_mismo_mensaje(self):
-        r = self.client.post(LOGIN, {'email': 'nadie@x.co', 'password': CLAVE}, format='json')
+        r = self.client.post(LOGIN, {'email': 'nadie@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.data['detail'], 'Correo o contraseña incorrectos.')
 
     def test_cuenta_desactivada_no_inicia_sesion(self):
         crear_usuario('baja@x.co', activo=False)
-        r = self.client.post(LOGIN, {'email': 'baja@x.co', 'password': CLAVE}, format='json')
+        r = self.client.post(LOGIN, {'email': 'baja@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
         self.assertEqual(r.status_code, 401)
 
     def test_faltan_campos(self):
@@ -57,10 +63,11 @@ class LoginTests(APITestCase):
         self.assertEqual(r.status_code, 400)
         self.assertIn('email', r.data)
         self.assertIn('password', r.data)
+        self.assertIn('captcha_token', r.data)
 
     # ---- SDGC-101: gestión de sesión y autorización ----
     def iniciar_sesion(self):
-        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE}, format='json')
+        r = self.client.post(LOGIN, {'email': 'ana@univalle.edu.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json')
         return r.data
 
     def test_me_con_token(self):
@@ -89,7 +96,7 @@ class LoginTests(APITestCase):
         r = self.client.post('/api/usuarios/', {}, format='json', HTTP_AUTHORIZATION='Bearer ' + datos['access'])
         self.assertEqual(r.status_code, 403)
         crear_usuario('admin@x.co', rol='ADMIN')
-        token = self.client.post(LOGIN, {'email': 'admin@x.co', 'password': CLAVE}, format='json').data['access']
+        token = self.client.post(LOGIN, {'email': 'admin@x.co', 'password': CLAVE, 'captcha_token': CAPTCHA}, format='json').data['access']
         r = self.client.post('/api/usuarios/', {
             'first_name': 'Luis', 'last_name': 'Ruiz', 'email': 'luis@x.co',
             'password': 'OtraClave#2026', 'institucion': 'Univalle', 'roles': ['AUTOR'],
