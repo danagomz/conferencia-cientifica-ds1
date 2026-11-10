@@ -28,7 +28,6 @@ def crear_conferencia(nombre='Congreso A'):
         fecha_inicio=date(2027, 6, 1), fecha_fin=date(2027, 6, 5), zona_horaria='America/Bogota',
     )
 
-
 class PlazosTests(APITestCase):
 
     def setUp(self):
@@ -101,6 +100,48 @@ class PlazosTests(APITestCase):
 
     def test_conferencia_inexistente(self):
         self.assertEqual(self.crear('POSTULACION', 0, 30, url='/api/conferencias/9999/plazos/').status_code, 404)
+
+    # ---- SDGC-275: validación de las fechas ----
+    def test_fin_debe_ser_posterior_al_inicio(self):
+        for inicio, fin in [(10, 10), (10, 5)]:
+            r = self.crear('POSTULACION', inicio, fin)
+            self.assertEqual(r.status_code, 400)
+            self.assertIn('fecha_fin', r.data)
+
+    def test_fecha_con_formato_invalido(self):
+        r = self.client.post(self.url, {'tipo_plazo': 'POSTULACION', 'fecha_inicio': 'ayer', 'fecha_fin': dia(5)}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('fecha_inicio', r.data)
+
+    def test_una_etapa_no_puede_empezar_antes_de_que_termine_la_anterior(self):
+        self.crear('POSTULACION', 0, 30)
+        r = self.crear('EVALUACION', 20, 60)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('fecha_inicio', r.data)
+        self.assertEqual(Plazo.objects.count(), 1)
+
+    def test_una_etapa_no_puede_terminar_despues_de_que_empiece_la_siguiente(self):
+        self.crear('EVALUACION', 31, 60)
+        r = self.crear('POSTULACION', 0, 40)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('fecha_fin', r.data)
+
+    def test_las_etapas_pueden_configurarse_en_cualquier_orden(self):
+        self.assertEqual(self.crear('PRESENTACION', 90, 92).status_code, 201)
+        self.assertEqual(self.crear('POSTULACION', 0, 30).status_code, 201)
+        self.assertEqual(self.crear('EVALUACION', 31, 60).status_code, 201)
+
+    def test_etapas_consecutivas_pueden_tocarse(self):
+        self.crear('POSTULACION', 0, 30)
+        self.assertEqual(self.crear('EVALUACION', 30, 60).status_code, 201)
+
+    def test_al_modificar_tampoco_se_rompe_la_secuencia(self):
+        self.crear('POSTULACION', 0, 30)
+        evaluacion = self.crear('EVALUACION', 31, 60).data
+        r = self.client.patch(f"{self.url}{evaluacion['id_plazo']}/", {'fecha_inicio': dia(10)}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('fecha_inicio', r.data)
+        self.assertEqual(Plazo.objects.get(pk=evaluacion['id_plazo']).fecha_inicio, BASE + timedelta(days=31))
 
     # ---- CA-247 y CA-248: cada conferencia conserva su configuración ----
     def test_cada_conferencia_tiene_su_propia_configuracion(self):
