@@ -70,3 +70,52 @@ class LineaTematica(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Plazo(models.Model):
+    """Fechas de una etapa del proceso de una conferencia (HU-030, SDGC-274)."""
+
+    POSTULACION = 'POSTULACION'
+    EVALUACION = 'EVALUACION'
+    VERSIONES_CORREGIDAS = 'VERSIONES_CORREGIDAS'
+    PRESENTACION = 'PRESENTACION'
+    DOCUMENTOS_FINALES = 'DOCUMENTOS_FINALES'
+
+    # El orden de esta lista es el orden cronológico que deben respetar las etapas.
+    TIPOS = [
+        (POSTULACION, 'Postulación de artículos'),
+        (EVALUACION, 'Evaluación'),
+        (VERSIONES_CORREGIDAS, 'Entrega de versiones corregidas'),
+        (PRESENTACION, 'Presentación'),
+        (DOCUMENTOS_FINALES, 'Entrega de documentos finales para publicación'),
+    ]
+
+    id_plazo = models.AutoField(primary_key=True)
+    id_conferencia = models.ForeignKey(
+        Conferencia,
+        on_delete=models.CASCADE,
+        db_column='id_conferencia',
+        related_name='plazos'
+    )
+    tipo_plazo = models.CharField(max_length=30, choices=TIPOS)
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+    descripcion = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'plazo'
+        verbose_name = 'Plazo'
+        verbose_name_plural = 'Plazos'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_conferencia', 'tipo_plazo'],
+                name='uq_un_plazo_por_etapa_y_conferencia'
+            )
+        ]
+
+    @classmethod
+    def orden_de(cls, tipo):
+        return [t for t, _ in cls.TIPOS].index(tipo)
+
+    def __str__(self):
+        return f"{self.get_tipo_plazo_display()} ({self.id_conferencia})"
