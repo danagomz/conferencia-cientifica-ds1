@@ -1,6 +1,9 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from conferencias.models import LineaTematica
+from conferencias.models import LineaTematica, Plazo
 from conferencias.tests_lineas import crear_conferencia, usuario_con_rol
 
 from .models import Articulo
@@ -15,6 +18,7 @@ class RegistrarArticuloTests(APITestCase):
         self.otra = crear_conferencia('Congreso B', '2026')
         self.linea = LineaTematica.objects.create(id_conferencia=self.conf, nombre='IA')
         self.linea_otra = LineaTematica.objects.create(id_conferencia=self.otra, nombre='Redes')
+        self.plazo = self.crear_plazo(self.conf, -5, 5)
         self.autor = usuario_con_rol('autor@x.co', 'AUTOR')
         self.comite = usuario_con_rol('comite@x.co', 'COMITE')
         self.datos = {
@@ -24,6 +28,15 @@ class RegistrarArticuloTests(APITestCase):
             'resumen': 'Resumen del artículo',
             'palabras_clave': 'ia, datos',
         }
+
+    @staticmethod
+    def crear_plazo(conferencia, dias_inicio, dias_fin):
+        ahora = timezone.now()
+        return Plazo.objects.create(
+            id_conferencia=conferencia, tipo_plazo=Plazo.POSTULACION,
+            fecha_inicio=ahora + timedelta(days=dias_inicio),
+            fecha_fin=ahora + timedelta(days=dias_fin),
+        )
 
     def test_autor_registra_articulo(self):
         self.client.force_authenticate(self.autor)
@@ -46,6 +59,7 @@ class RegistrarArticuloTests(APITestCase):
 
     def test_linea_de_otra_conferencia_se_rechaza(self):
         self.client.force_authenticate(self.autor)
+        self.crear_plazo(self.otra, -5, 5)
         self.datos['id_linea'] = self.linea_otra.id_linea
         r = self.client.post(URL, self.datos, format='json')
         self.assertEqual(r.status_code, 400)
@@ -70,3 +84,38 @@ class RegistrarArticuloTests(APITestCase):
         self.datos['id_conferencia'] = 9999
         r = self.client.post(URL, self.datos, format='json')
         self.assertEqual(r.status_code, 400)
+
+    # ---- SDGC-127: fecha límite de postulación ----
+    def test_plazo_vencido_se_rechaza(self):
+        self.plazo.fecha_inicio = timezone.now() - timedelta(days=10)
+        self.plazo.fecha_fin = timezone.now() - timedelta(days=1)
+        self.plazo.save()
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('venció', str(r.data['id_conferencia']))
+        self.assertEqual(Articulo.objects.count(), 0)
+
+    def test_plazo_que_no_ha_comenzado_se_rechaza(self):
+        self.plazo.fecha_inicio = timezone.now() + timedelta(days=1)
+        self.plazo.fecha_fin = timezone.now() + timedelta(days=10)
+        self.plazo.save()
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('no ha comenzado', str(r.data['id_conferencia']))
+
+    def test_sin_plazo_configurado_se_rechaza(self):
+        self.plazo.delete()
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('no tiene configurado', str(r.data['id_conferencia']))
+
+    def test_plazo_de_otra_etapa_no_habilita_postulacion(self):
+        self.plazo.tipo_plazo = Plazo.EVALUACION
+        self.plazo.save()
+        self.client.force_authenticate(self.autor)
+        r = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(r.status_code, 400)
+

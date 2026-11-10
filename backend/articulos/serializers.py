@@ -1,6 +1,7 @@
+from django.utils import timezone
 from rest_framework import serializers
 
-from conferencias.models import Conferencia, LineaTematica
+from conferencias.models import Conferencia, LineaTematica, Plazo
 
 from .models import Articulo
 
@@ -23,6 +24,7 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
 
     def validate(self, datos):
         conferencia = datos['id_conferencia']
+        self._validar_plazo_postulacion(conferencia)
         linea = datos['id_linea']
         if linea.id_conferencia_id != conferencia.id_conferencia:
             raise serializers.ValidationError(
@@ -33,6 +35,26 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
                 {'id_linea': 'La línea temática no está habilitada.'}
             )
         return datos
+
+    @staticmethod
+    def _validar_plazo_postulacion(conferencia):
+        """La postulación solo se permite dentro del plazo POSTULACION (SDGC-127)."""
+        plazo = Plazo.objects.filter(
+            id_conferencia=conferencia, tipo_plazo=Plazo.POSTULACION
+        ).first()
+        if plazo is None:
+            raise serializers.ValidationError(
+                {'id_conferencia': 'La conferencia aún no tiene configurado el plazo de postulación.'}
+            )
+        ahora = timezone.now()
+        if ahora < plazo.fecha_inicio:
+            raise serializers.ValidationError(
+                {'id_conferencia': 'El plazo de postulación aún no ha comenzado.'}
+            )
+        if ahora > plazo.fecha_fin:
+            raise serializers.ValidationError(
+                {'id_conferencia': 'El plazo de postulación ya venció.'}
+            )
 
     def create(self, datos):
         return Articulo.objects.create(
