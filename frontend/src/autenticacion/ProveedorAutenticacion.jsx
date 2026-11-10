@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { ContextoAutenticacion } from './contextoAutenticacion'
-import { iniciarSesion as solicitarInicioSesion } from './api'
+import { iniciarSesion as solicitarInicioSesion } from './solicitudes'
 import { normalizarRoles } from './roles'
-import { borrarSesion, guardarSesion, leerSesion } from './session'
+import { borrarSesion, guardarSesion, leerSesion } from './sesion'
 
 export function ProveedorAutenticacion({ children }) {
   const [sesion, establecerSesion] = useState(leerSesion)

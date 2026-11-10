@@ -40,13 +40,13 @@ export async function registrarAutor({ nombre, apellido, correo, contrasena, ins
 
   const datos = await respuesta.json().catch(() => null)
   if (!respuesta.ok) {
-    throw crearErrorRegistro(datos)
+    throw crearErrorRegistro(datos, respuesta.status)
   }
 
   return datos
 }
 
-function crearErrorRegistro(datos) {
+function crearErrorRegistro(datos, estadoHttp) {
   const nombresCampo = {
     first_name: 'nombre',
     last_name: 'apellido',
@@ -57,9 +57,9 @@ function crearErrorRegistro(datos) {
   const erroresCampo = {}
   const mensajesGenerales = []
 
-  if (datos && typeof datos === 'object') {
+  if (datos && typeof datos === 'object' && !Array.isArray(datos)) {
     for (const [campo, errores] of Object.entries(datos)) {
-      const mensaje = Array.isArray(errores) ? errores.join(' ') : String(errores)
+      const mensaje = convertirErroresATexto(errores)
       const nombreCampo = nombresCampo[campo]
       if (nombreCampo) {
         erroresCampo[nombreCampo] = [erroresCampo[nombreCampo], mensaje].filter(Boolean).join(' ')
@@ -69,11 +69,25 @@ function crearErrorRegistro(datos) {
     }
   }
 
-  const errorSolicitud = new Error(
-    mensajesGenerales.join(' ') || 'No se pudo crear la cuenta. Revisa los datos e intenta de nuevo.',
-  )
+  const mensaje =
+    mensajesGenerales.join(' ') ||
+    Object.values(erroresCampo).join(' ') ||
+    (estadoHttp >= 500
+      ? 'El servidor no pudo completar el registro. Intenta de nuevo más tarde.'
+      : 'No se pudo crear la cuenta. Revisa los datos e intenta de nuevo.')
+  const errorSolicitud = new Error(mensaje)
   errorSolicitud.erroresCampo = erroresCampo
   return errorSolicitud
+}
+
+function convertirErroresATexto(valor) {
+  if (Array.isArray(valor)) {
+    return valor.map(convertirErroresATexto).filter(Boolean).join(' ')
+  }
+  if (valor && typeof valor === 'object') {
+    return Object.values(valor).map(convertirErroresATexto).filter(Boolean).join(' ')
+  }
+  return String(valor ?? '')
 }
 
 export async function iniciarSesion({ correo, contrasena, tokenCaptcha }) {
@@ -100,7 +114,7 @@ export async function iniciarSesion({ correo, contrasena, tokenCaptcha }) {
   return leerUsuario(datos ?? {})
 }
 
-// Mensajes del login según lo que responda el backend (CA-040 y CA-041).
+// Mensajes del inicio de sesión según lo que responda el backend (CA-040 y CA-041).
 function mensajeDeError(estadoHttp, datos) {
   if (datos === null || estadoHttp >= 500) {
     return 'El servidor no está disponible. Intenta de nuevo más tarde.'

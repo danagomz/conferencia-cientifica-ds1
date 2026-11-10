@@ -1,5 +1,5 @@
-// Guarda la sesión en sessionStorage: se borra al cerrar la pestaña.
-// Forma de la sesión: { access, refresh, user: { id, email, nombre }, roles: [...], activeRole }
+// Guarda la sesión en sessionStorage, que se borra al cerrar la pestaña.
+// También lee claves antiguas en inglés para conservar sesiones existentes.
 
 const CLAVE = 'sgc.session'
 

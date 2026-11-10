@@ -58,8 +58,8 @@ export function FormularioInicioSesion({ alEnviar }) {
                 required
                 autoComplete="username"
                 value={correo}
-                onChange={(event) => {
-                  establecerCorreo(event.target.value)
+                onChange={(evento) => {
+                  establecerCorreo(evento.target.value)
                   establecerError('')
                 }}
                 placeholder="ejemplo@correo.com"
@@ -78,8 +78,8 @@ export function FormularioInicioSesion({ alEnviar }) {
                   required
                   autoComplete="current-password"
                   value={contrasena}
-                  onChange={(event) => {
-                    establecerContrasena(event.target.value)
+                  onChange={(evento) => {
+                    establecerContrasena(evento.target.value)
                     establecerError('')
                   }}
                   placeholder="Contraseña"

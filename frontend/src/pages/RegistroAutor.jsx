@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { registrarAutor } from '../auth/api'
+import { registrarAutor } from '../autenticacion/solicitudes'
 import { Marca } from '../components/Marca'
 
 const formularioInicial = {
@@ -24,20 +24,20 @@ export function RegistroAutor() {
   const [registroExitoso, establecerRegistroExitoso] = useState(false)
 
   function actualizarCampo(evento) {
-    const { name, value } = evento.target
-    if (name === 'confirmarContrasena') {
-      establecerConfirmacionContrasena(value)
+    const { name: nombreCampo, value: valor } = evento.target
+    if (nombreCampo === 'confirmarContrasena') {
+      establecerConfirmacionContrasena(valor)
     } else {
       establecerFormulario((actual) => ({
         ...actual,
-        [name]: value,
+        [nombreCampo]: valor,
       }))
     }
     establecerError('')
     establecerErroresCampo((actuales) => ({
       ...actuales,
-      [name]: '',
-      ...(name === 'contrasena' ? { confirmarContrasena: '' } : {}),
+      [nombreCampo]: '',
+      ...(nombreCampo === 'contrasena' ? { confirmarContrasena: '' } : {}),
     }))
   }
 
@@ -62,6 +62,7 @@ export function RegistroAutor() {
 
     if (Object.keys(errores).length > 0) {
       establecerErroresCampo(errores)
+      establecerError('Revisa los campos indicados antes de continuar.')
       return
     }
 

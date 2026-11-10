@@ -1,6 +1,6 @@
 // Roles del sistema y su pantalla de inicio.
 // Los nombres coinciden con los grupos de Django (ADMIN, COMITE, AUTOR).
-// Para agregar un rol nuevo: añadirlo aquí y listo (login, selector y guardas lo reconocen).
+// Para agregar un rol: añadirlo aquí y el inicio de sesión, selector y guardas lo reconocerán.
 
 export const ROLES_DISPONIBLES = {
   ADMIN: {
@@ -31,12 +31,10 @@ export const RUTA_ELEGIR_ROL = '/elegir-rol'
 export function normalizarRoles(roles) {
   const lista = Array.isArray(roles) ? roles : []
   const claves = lista
-    .map((r) => String(r).trim().toUpperCase())
+    .map((rol) => String(rol).trim().toUpperCase())
     .filter((rol) => Object.hasOwn(ROLES_DISPONIBLES, rol))
   return [...new Set(claves)]
 }
-
-
 // A dónde debe ir una sesión recién creada o ya existente (CA-038 y CA-039):
 //  - con rol elegido  → la pantalla de ese rol
 //  - con varios roles → el selector

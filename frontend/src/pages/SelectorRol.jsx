@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useAutenticacion } from '../auth/useAutenticacion'
-import { ROLES_DISPONIBLES, rutaInicial } from '../auth/roles'
+import { useAutenticacion } from '../autenticacion/useAutenticacion'
+import { ROLES_DISPONIBLES, rutaInicial } from '../autenticacion/roles'
 import { useNavigate } from 'react-router-dom'
 import { Marca } from '../components/Marca'
 

@@ -1,5 +1,5 @@
-import { useAutenticacion } from '../auth/useAutenticacion'
-import { ROLES_DISPONIBLES, RUTA_ELEGIR_ROL } from '../auth/roles'
+import { useAutenticacion } from '../autenticacion/useAutenticacion'
+import { ROLES_DISPONIBLES, RUTA_ELEGIR_ROL } from '../autenticacion/roles'
 import { useNavigate } from 'react-router-dom'
 import { Marca } from '../components/Marca'
 
