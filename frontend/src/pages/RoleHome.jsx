@@ -1,0 +1,60 @@
+import { useAuth } from '../auth/useAuth'
+import { ROLES, RUTA_ELEGIR_ROL } from '../auth/roles'
+import { useNavigate } from 'react-router-dom'
+import { Marca } from './Marca'
+
+// Pantalla de inicio de cada rol (destino de la redirección, CA-039).
+// Por ahora es un esqueleto: cada historia de usuario irá agregando sus pantallas aquí.
+export function RoleHome({ rol }) {
+  const navigate = useNavigate()
+  const { session, logout } = useAuth()
+  const info = ROLES[rol]
+  const variosRoles = session.roles.length > 1
+
+  return (
+    <div className="min-h-dvh bg-page font-sans text-fg">
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <Marca compacta />
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <span className="text-muted">
+              {session.user.nombre} · <strong className="font-semibold text-fg">{info.label}</strong>
+            </span>
+            {variosRoles && (
+              <button
+                type="button"
+                onClick={() => navigate(RUTA_ELEGIR_ROL)}
+                className="font-semibold underline underline-offset-4 hover:text-highlight"
+              >
+                Cambiar de rol
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={logout}
+              className="font-semibold underline underline-offset-4 hover:text-highlight"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-rise">
+        <h1 className="font-display text-4xl font-extrabold tracking-tight">Panel de {info.label.toLowerCase()}</h1>
+        <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
+        <p className="mt-3 max-w-prose text-muted">{info.descripcion}</p>
+
+        <h2 className="mt-10 font-display text-xl font-bold">Disponible para este rol</h2>
+        <ul className="mt-3 max-w-prose divide-y divide-line border-y border-line">
+          {info.funciones.map((funcion) => (
+            <li key={funcion} className="flex items-center justify-between gap-4 py-3">
+              <span>{funcion}</span>
+              <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">Próximamente</span>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </div>
+  )
+}
