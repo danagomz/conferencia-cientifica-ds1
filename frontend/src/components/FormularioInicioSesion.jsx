@@ -1,36 +1,36 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Captcha } from './Captcha'
+import { VerificacionHumana } from './VerificacionHumana'
 import { Marca } from './Marca'
 
-const HERO_IMAGE = '/login-hero.jpg'
-const fieldClass =
+const IMAGEN_PORTADA = '/login-hero.jpg'
+const claseCampo =
   'w-full rounded-xl border-2 border-highlight bg-panel px-4 py-3 outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-highlight/30'
 
-export function LoginForm({ onSubmit }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [captchaToken, setCaptchaToken] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const captchaRef = useRef(null)
+export function FormularioInicioSesion({ alEnviar }) {
+  const [correo, establecerCorreo] = useState('')
+  const [contrasena, establecerContrasena] = useState('')
+  const [mostrarContrasena, establecerMostrarContrasena] = useState(false)
+  const [tokenCaptcha, establecerTokenCaptcha] = useState(null)
+  const [cargando, establecerCargando] = useState(false)
+  const [error, establecerError] = useState('')
+  const referenciaCaptcha = useRef(null)
 
-  const canSubmit = email.trim() !== '' && password !== '' && captchaToken !== null && !loading
+  const puedeEnviar = correo.trim() !== '' && contrasena !== '' && tokenCaptcha !== null && !cargando
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    if (!canSubmit) return
+  async function enviarFormulario(evento) {
+    evento.preventDefault()
+    if (!puedeEnviar) return
 
-    setError('')
-    setLoading(true)
+    establecerError('')
+    establecerCargando(true)
     try {
-      await onSubmit({ email, password, captchaToken })
-    } catch (err) {
-      setError(err?.message || 'No se pudo iniciar sesión. Intenta de nuevo.')
-      captchaRef.current?.reset()
+      await alEnviar({ correo, contrasena, tokenCaptcha })
+    } catch (errorEnvio) {
+      establecerError(errorEnvio?.message || 'No se pudo iniciar sesión. Intenta de nuevo.')
+      referenciaCaptcha.current?.reiniciar()
     } finally {
-      setLoading(false)
+      establecerCargando(false)
     }
   }
 
@@ -47,56 +47,60 @@ export function LoginForm({ onSubmit }) {
           </h1>
           <p className="mt-3 text-muted">Acceda a su panel de gestión académica y científica.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <form onSubmit={enviarFormulario} className="mt-8 space-y-5">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-semibold">
+              <label htmlFor="correo" className="mb-1.5 block text-sm font-semibold">
                 Correo electrónico
               </label>
               <input
-                id="email"
+                id="correo"
                 type="email"
                 required
                 autoComplete="username"
-                value={email}
+                value={correo}
                 onChange={(event) => {
-                  setEmail(event.target.value)
-                  setError('')
+                  establecerCorreo(event.target.value)
+                  establecerError('')
                 }}
                 placeholder="ejemplo@correo.com"
-                className={fieldClass}
+                className={claseCampo}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-semibold">
+              <label htmlFor="contrasena" className="mb-1.5 block text-sm font-semibold">
                 Contraseña
               </label>
               <div className="flex gap-2">
                 <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  id="contrasena"
+                  type={mostrarContrasena ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
-                  value={password}
+                  value={contrasena}
                   onChange={(event) => {
-                    setPassword(event.target.value)
-                    setError('')
+                    establecerContrasena(event.target.value)
+                    establecerError('')
                   }}
                   placeholder="Contraseña"
-                  className={fieldClass}
+                  className={claseCampo}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((visible) => !visible)}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  onClick={() => establecerMostrarContrasena((visible) => !visible)}
+                  aria-label={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   className="rounded-xl border border-line px-3 text-sm font-medium hover:bg-soft"
                 >
-                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                  {mostrarContrasena ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
             </div>
 
-            <Captcha ref={captchaRef} onChange={setCaptchaToken} disabled={loading} />
+            <VerificacionHumana
+              ref={referenciaCaptcha}
+              alCambiar={establecerTokenCaptcha}
+              deshabilitada={cargando}
+            />
 
             {error && (
               <p role="alert" className="rounded-xl border border-highlight bg-soft px-4 py-3 text-sm">
@@ -106,10 +110,10 @@ export function LoginForm({ onSubmit }) {
 
             <button
               type="submit"
-              disabled={!canSubmit}
+              disabled={!puedeEnviar}
               className="w-full rounded-full bg-brand px-8 py-3.5 font-semibold text-brand-fg transition hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Ingresando…' : 'Ingresar'}
+              {cargando ? 'Ingresando…' : 'Ingresar'}
             </button>
           </form>
 
@@ -125,8 +129,8 @@ export function LoginForm({ onSubmit }) {
       <aside className="relative hidden p-4 md:block">
         <div className="relative h-full min-h-[32rem] overflow-hidden rounded-3xl">
           <img
-            src={HERO_IMAGE}
-            alt="Biblioteca universitaria"
+            src={IMAGEN_PORTADA}
+            alt="Libros en una biblioteca"
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />

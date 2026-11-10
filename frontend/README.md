@@ -10,7 +10,7 @@ Interfaz de la Conferencia Científica hecha con React y Vite.
 - `src/pages/`: registro de autor, selector de rol y panel de inicio.
 - `src/index.css`: estilos y colores compartidos.
 
-La ruta `/registro-autor` contiene el formulario de interfaz. El backend actual no ofrece auto-registro público: `POST /api/usuarios/` está restringido a ADMIN o COMITE. El alta pública requiere un endpoint que valide unicidad y asigne `AUTOR` en el servidor; el formulario no simula que la cuenta se haya creado.
+La ruta `/registro-autor` envía nombre, apellido, correo electrónico, contraseña e institución a `POST /api/auth/registro-autor/`. El formulario también pide confirmar la contraseña y comprueba que coincida antes de enviar; el campo de confirmación no se envía al servidor. El servidor valida los datos, comprueba que el correo sea único, guarda la contraseña con el hash de Django y asigna exclusivamente el rol `AUTOR`. Los errores de validación del servidor se muestran junto a sus campos.
 
 ## Desarrollo
 
@@ -23,9 +23,7 @@ npm run dev
 
 `npm run build` genera la versión de producción y `npm run lint` revisa el código.
 
-El frontend usa `fetch` para el login. `VITE_API_URL` cambia la dirección base de la API; por defecto es `/api`, que Vite reenvía a Django en `http://127.0.0.1:8000`.
-
-Para probar la interfaz sin servidor, configura `VITE_USE_MOCK=true` en `.env.local`. Las cuentas de demostración usan la contraseña `Demo#12345`.
+El frontend usa `fetch` para el login y el registro. Ambas operaciones requieren el backend. `VITE_API_URL` cambia la dirección base de la API; por defecto es `/api`, que Vite reenvía a Django en `http://127.0.0.1:8000`.
 
 ## Nota sobre CAPTCHA
 

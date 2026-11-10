@@ -1,88 +1,80 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { registrarAutor } from '../auth/api'
 import { Marca } from '../components/Marca'
 
-const initialForm = {
+const formularioInicial = {
   nombre: '',
-  email: '',
+  apellido: '',
+  correo: '',
   institucion: '',
-  pais: '',
-  password: '',
-  confirmarPassword: '',
-  aceptaTerminos: false,
+  contrasena: '',
 }
 
-const inputClass =
+const claseCampo =
   'mt-2 min-h-12 w-full border border-[#BDC2BF] bg-[#FCFCFC] px-4 text-[#02111B] outline-none transition focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20'
 
-const countries = [
-  'Argentina',
-  'Brasil',
-  'Chile',
-  'Colombia',
-  'Costa Rica',
-  'Ecuador',
-  'España',
-  'Estados Unidos',
-  'México',
-  'Perú',
-  'Uruguay',
-  'Otro',
-]
-
 export function RegistroAutor() {
-  const [form, setForm] = useState(initialForm)
-  const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState({})
-  const [passwordError, setPasswordError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [formulario, establecerFormulario] = useState(formularioInicial)
+  const [confirmarContrasena, establecerConfirmacionContrasena] = useState('')
+  const [error, establecerError] = useState('')
+  const [erroresCampo, establecerErroresCampo] = useState({})
+  const [mostrarContrasena, establecerMostrarContrasena] = useState(false)
+  const [cargando, establecerCargando] = useState(false)
+  const [registroExitoso, establecerRegistroExitoso] = useState(false)
 
-  function updateField(event) {
-    const { name, value, checked, type } = event.target
-    setForm((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? checked : value,
+  function actualizarCampo(evento) {
+    const { name, value } = evento.target
+    if (name === 'confirmarContrasena') {
+      establecerConfirmacionContrasena(value)
+    } else {
+      establecerFormulario((actual) => ({
+        ...actual,
+        [name]: value,
+      }))
+    }
+    establecerError('')
+    establecerErroresCampo((actuales) => ({
+      ...actuales,
+      [name]: '',
+      ...(name === 'contrasena' ? { confirmarContrasena: '' } : {}),
     }))
-    setError('')
-    setFieldErrors((current) => ({ ...current, [name]: '' }))
-    setPasswordError('')
   }
 
-  function submitForm(event) {
-    event.preventDefault()
-    setError('')
+  async function enviarFormulario(evento) {
+    evento.preventDefault()
+    establecerError('')
+    establecerErroresCampo({})
 
-    const errors = {}
-    if (!form.nombre.trim()) errors.nombre = 'Ingresa tu nombre completo.'
-    if (!form.email.trim()) errors.email = 'Ingresa tu correo electrónico.'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = 'Ingresa un correo electrónico válido.'
+    const errores = {}
+    if (!formulario.nombre.trim()) errores.nombre = 'Ingresa tu nombre.'
+    if (!formulario.apellido.trim()) errores.apellido = 'Ingresa tu apellido.'
+    if (!formulario.correo.trim()) errores.correo = 'Ingresa tu correo electrónico.'
+    else if (!evento.currentTarget.elements.correo.checkValidity()) {
+      errores.correo = 'Ingresa un correo electrónico válido.'
     }
-    if (!form.institucion.trim()) errors.institucion = 'Ingresa tu institución.'
-    if (!form.pais) errors.pais = 'Selecciona tu país.'
-    if (!form.password) errors.password = 'Ingresa una contraseña.'
-    if (!form.confirmarPassword) errors.confirmarPassword = 'Confirma tu contraseña.'
-    if (!form.aceptaTerminos) errors.aceptaTerminos = 'Debes aceptar los términos para continuar.'
+    if (!formulario.institucion.trim()) errores.institucion = 'Ingresa tu institución.'
+    if (!formulario.contrasena) errores.contrasena = 'Ingresa una contraseña.'
+    if (!confirmarContrasena) errores.confirmarContrasena = 'Confirma tu contraseña.'
+    else if (formulario.contrasena !== confirmarContrasena) {
+      errores.confirmarContrasena = 'Las contraseñas no coinciden.'
+    }
 
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
+    if (Object.keys(errores).length > 0) {
+      establecerErroresCampo(errores)
       return
     }
 
-    if (form.password.length < 8) {
-      setPasswordError('Usa al menos 8 caracteres.')
-      return
+    establecerCargando(true)
+    try {
+      await registrarAutor(formulario)
+      establecerRegistroExitoso(true)
+    } catch (errorSolicitud) {
+      establecerError(errorSolicitud.message || 'No se pudo crear la cuenta. Intenta de nuevo.')
+      establecerErroresCampo(errorSolicitud.erroresCampo ?? {})
+    } finally {
+      establecerCargando(false)
     }
-
-    if (form.password !== form.confirmarPassword) {
-      setPasswordError('Las contraseñas no coinciden.')
-      return
-    }
-
-    setPasswordError('')
-    setError(
-      'El formulario está validado, pero el registro público aún no está habilitado. Tus datos no se enviaron.',
-    )
   }
 
   return (
@@ -198,42 +190,75 @@ export function RegistroAutor() {
               </p>
             </div>
 
-            <form onSubmit={submitForm} className="mt-7" noValidate>
+            {registroExitoso ? (
+              <div role="status" className="mt-8 border-l-4 border-[#5D737E] bg-[#E3E7D3] px-5 py-5">
+                <h3 className="font-display text-xl font-bold">¡Tu cuenta ha sido creada correctamente!</h3>
+                <p className="mt-2 text-sm leading-6 text-[#3F4045]">
+                  Ya puedes iniciar sesión como autor con el correo que registraste.
+                </p>
+                <Link
+                  to="/login"
+                  className="mt-4 inline-block bg-[#02111B] px-6 py-3 font-semibold text-[#FCFCFC] hover:bg-[#5D737E]"
+                >
+                  Ir a iniciar sesión
+                </Link>
+              </div>
+            ) : <form onSubmit={enviarFormulario} className="mt-7" noValidate>
               <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-                <label className="block text-sm font-semibold sm:col-span-2">
-                  Nombre completo <span className="text-[#5D737E]">*</span>
+                <label className="block text-sm font-semibold">
+                  Nombre <span className="text-[#5D737E]">*</span>
                   <input
-                    className={`${inputClass} ${fieldErrors.nombre ? 'border-[#30292F]' : ''}`}
+                    className={`${claseCampo} ${erroresCampo.nombre ? 'border-[#30292F]' : ''}`}
                     type="text"
                     name="nombre"
-                    autoComplete="name"
-                    placeholder="Ej. María Fernanda López"
-                    value={form.nombre}
-                    onChange={updateField}
+                    autoComplete="given-name"
+                    placeholder="Ej. María Fernanda"
+                    value={formulario.nombre}
+                    onChange={actualizarCampo}
                     required
-                    aria-invalid={Boolean(fieldErrors.nombre)}
-                    aria-describedby={fieldErrors.nombre ? 'nombre-error' : undefined}
+                    maxLength={150}
+                    aria-invalid={Boolean(erroresCampo.nombre)}
+                    aria-describedby={erroresCampo.nombre ? 'nombre-error' : undefined}
                   />
-                  {fieldErrors.nombre && <span id="nombre-error" className="mt-1 block text-xs text-[#30292F]">{fieldErrors.nombre}</span>}
+                  {erroresCampo.nombre && <span id="nombre-error" className="mt-1 block text-xs text-[#30292F]">{erroresCampo.nombre}</span>}
+                </label>
+
+                <label className="block text-sm font-semibold">
+                  Apellido <span className="text-[#5D737E]">*</span>
+                  <input
+                    className={`${claseCampo} ${erroresCampo.apellido ? 'border-[#30292F]' : ''}`}
+                    type="text"
+                    name="apellido"
+                    autoComplete="family-name"
+                    placeholder="Ej. López"
+                    value={formulario.apellido}
+                    onChange={actualizarCampo}
+                    required
+                    maxLength={150}
+                    aria-invalid={Boolean(erroresCampo.apellido)}
+                    aria-describedby={erroresCampo.apellido ? 'apellido-error' : undefined}
+                  />
+                  {erroresCampo.apellido && <span id="apellido-error" className="mt-1 block text-xs text-[#30292F]">{erroresCampo.apellido}</span>}
                 </label>
 
                 <label className="block text-sm font-semibold sm:col-span-2">
                   Correo electrónico <span className="text-[#5D737E]">*</span>
                   <input
-                    className={`${inputClass} ${fieldErrors.email ? 'border-[#30292F]' : ''}`}
+                    className={`${claseCampo} ${erroresCampo.correo ? 'border-[#30292F]' : ''}`}
                     type="email"
-                    name="email"
+                    name="correo"
                     autoComplete="email"
                     placeholder="nombre@universidad.edu"
-                    value={form.email}
-                    onChange={updateField}
+                    value={formulario.correo}
+                    onChange={actualizarCampo}
                     required
-                    aria-invalid={Boolean(fieldErrors.email)}
-                    aria-describedby={fieldErrors.email ? 'email-error' : 'email-help'}
+                    maxLength={254}
+                    aria-invalid={Boolean(erroresCampo.correo)}
+                    aria-describedby={erroresCampo.correo ? 'correo-error' : 'correo-ayuda'}
                   />
-                  {fieldErrors.email ? (
-                    <span id="email-error" className="mt-1 block text-xs font-normal text-[#30292F]">{fieldErrors.email}</span>
-                  ) : <span id="email-help" className="mt-1 block text-xs font-normal text-[#3F4045]">
+                  {erroresCampo.correo ? (
+                    <span id="correo-error" className="mt-1 block text-xs font-normal text-[#30292F]">{erroresCampo.correo}</span>
+                  ) : <span id="correo-ayuda" className="mt-1 block text-xs font-normal text-[#3F4045]">
                     El servidor comprobará si el correo ya está registrado.
                   </span>}
                 </label>
@@ -241,102 +266,68 @@ export function RegistroAutor() {
                 <label className="block text-sm font-semibold">
                   Institución o afiliación <span className="text-[#5D737E]">*</span>
                   <input
-                    className={`${inputClass} ${fieldErrors.institucion ? 'border-[#30292F]' : ''}`}
+                    className={`${claseCampo} ${erroresCampo.institucion ? 'border-[#30292F]' : ''}`}
                     type="text"
                     name="institucion"
                     autoComplete="organization"
                     placeholder="Universidad o centro de investigación"
-                    value={form.institucion}
-                    onChange={updateField}
+                    value={formulario.institucion}
+                    onChange={actualizarCampo}
                     required
-                    aria-invalid={Boolean(fieldErrors.institucion)}
+                    maxLength={150}
+                    aria-invalid={Boolean(erroresCampo.institucion)}
                   />
-                  {fieldErrors.institucion && <span className="mt-1 block text-xs font-normal text-[#30292F]">{fieldErrors.institucion}</span>}
-                </label>
-
-                <label className="block text-sm font-semibold">
-                  País <span className="text-[#5D737E]">*</span>
-                  <select
-                    className={`${inputClass} appearance-none ${fieldErrors.pais ? 'border-[#30292F]' : ''}`}
-                    name="pais"
-                    autoComplete="country-name"
-                    value={form.pais}
-                    onChange={updateField}
-                    required
-                    aria-invalid={Boolean(fieldErrors.pais)}
-                  >
-                    <option value="" disabled>Selecciona un país</option>
-                    {countries.map((country) => <option key={country}>{country}</option>)}
-                  </select>
-                  {fieldErrors.pais && <span className="mt-1 block text-xs font-normal text-[#30292F]">{fieldErrors.pais}</span>}
+                  {erroresCampo.institucion && <span className="mt-1 block text-xs font-normal text-[#30292F]">{erroresCampo.institucion}</span>}
                 </label>
 
                 <label className="block text-sm font-semibold">
                   Contraseña <span className="text-[#5D737E]">*</span>
                   <input
-                    className={`${inputClass} ${fieldErrors.password || passwordError ? 'border-[#30292F]' : ''}`}
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
+                    className={`${claseCampo} ${erroresCampo.contrasena ? 'border-[#30292F]' : ''}`}
+                    type={mostrarContrasena ? 'text' : 'password'}
+                    name="contrasena"
                     autoComplete="new-password"
-                    placeholder="Mínimo 8 caracteres"
-                    value={form.password}
-                    onChange={updateField}
-                    minLength={8}
+                    placeholder="Ingresa una contraseña"
+                    value={formulario.contrasena}
+                    onChange={actualizarCampo}
                     required
-                    aria-invalid={Boolean(fieldErrors.password || passwordError)}
+                    aria-invalid={Boolean(erroresCampo.contrasena)}
                   />
+                  {erroresCampo.contrasena && <span className="mt-1 block text-xs text-[#30292F]">{erroresCampo.contrasena}</span>}
                 </label>
 
                 <label className="block text-sm font-semibold">
                   Confirmar contraseña <span className="text-[#5D737E]">*</span>
                   <input
-                    className={`${inputClass} ${fieldErrors.confirmarPassword || passwordError ? 'border-[#30292F]' : ''}`}
-                    type={showPassword ? 'text' : 'password'}
-                    name="confirmarPassword"
+                    className={`${claseCampo} ${erroresCampo.confirmarContrasena ? 'border-[#30292F]' : ''}`}
+                    type={mostrarContrasena ? 'text' : 'password'}
+                    name="confirmarContrasena"
                     autoComplete="new-password"
                     placeholder="Repite tu contraseña"
-                    value={form.confirmarPassword}
-                    onChange={updateField}
+                    value={confirmarContrasena}
+                    onChange={actualizarCampo}
                     required
-                    aria-invalid={Boolean(fieldErrors.confirmarPassword || passwordError)}
+                    aria-invalid={Boolean(erroresCampo.confirmarContrasena)}
+                    aria-describedby={erroresCampo.confirmarContrasena ? 'confirmar-contrasena-error' : undefined}
                   />
+                  {erroresCampo.confirmarContrasena && (
+                    <span id="confirmar-contrasena-error" className="mt-1 block text-xs text-[#30292F]">
+                      {erroresCampo.confirmarContrasena}
+                    </span>
+                  )}
                 </label>
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                {passwordError || fieldErrors.password || fieldErrors.confirmarPassword ? (
-                  <p role="alert" className="text-sm text-[#30292F]">
-                    {passwordError || fieldErrors.password || fieldErrors.confirmarPassword}
-                  </p>
-                ) : (
-                  <span className="text-xs text-[#3F4045]">Usa una contraseña difícil de adivinar.</span>
-                )}
+                <span className="text-xs text-[#3F4045]">El servidor validará la contraseña.</span>
                 <button
                   type="button"
-                  onClick={() => setShowPassword((visible) => !visible)}
+                  onClick={() => establecerMostrarContrasena((visible) => !visible)}
                   className="min-h-10 px-2 text-sm font-semibold text-[#5D737E] underline underline-offset-4 hover:text-[#02111B]"
                 >
-                  {showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+                  {mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 </button>
               </div>
-
-              <label className={`mt-6 flex items-start gap-3 border-t border-[#BDC2BF] pt-5 text-sm leading-6 ${fieldErrors.aceptaTerminos ? 'text-[#30292F]' : 'text-[#3F4045]'}`}>
-                <input
-                  className="mt-1 h-4 w-4 accent-[#5D737E]"
-                  type="checkbox"
-                  name="aceptaTerminos"
-                  checked={form.aceptaTerminos}
-                  onChange={updateField}
-                  required
-                />
-                <span>
-                  Acepto los <strong className="font-semibold text-[#02111B]">términos y condiciones</strong> y
-                  la política de tratamiento de datos.
-                </span>
-              </label>
-              {fieldErrors.aceptaTerminos && (
-                <p className="mt-1 text-xs text-[#30292F]">{fieldErrors.aceptaTerminos}</p>
-              )}
 
               {error && (
                 <p role="alert" className="mt-5 border-l-4 border-[#5D737E] bg-[#E3E7D3] px-4 py-3 text-sm leading-6 text-[#25291C]">
@@ -347,9 +338,10 @@ export function RegistroAutor() {
               <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-center">
                 <button
                   type="submit"
-                  className="min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E]"
+                  disabled={cargando}
+                  className="min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E] disabled:cursor-wait disabled:opacity-60"
                 >
-                  Crear cuenta de autor
+                  {cargando ? 'Creando cuenta…' : 'Crear cuenta de autor'}
                 </button>
                 <p className="text-sm text-[#3F4045]">
                   ¿Ya tienes una cuenta?{' '}
@@ -358,7 +350,7 @@ export function RegistroAutor() {
                   </Link>
                 </p>
               </div>
-            </form>
+            </form>}
 
             <div className="mt-9 flex items-start gap-3 border-t border-[#BDC2BF] pt-5 text-sm leading-6 text-[#3F4045]">
               <span aria-hidden="true" className="text-lg text-[#5D737E]">◈</span>

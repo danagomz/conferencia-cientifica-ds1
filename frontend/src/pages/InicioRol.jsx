@@ -1,15 +1,15 @@
-import { useAuth } from '../auth/useAuth'
-import { ROLES, RUTA_ELEGIR_ROL } from '../auth/roles'
+import { useAutenticacion } from '../auth/useAutenticacion'
+import { ROLES_DISPONIBLES, RUTA_ELEGIR_ROL } from '../auth/roles'
 import { useNavigate } from 'react-router-dom'
 import { Marca } from '../components/Marca'
 
 // Pantalla de inicio de cada rol (destino de la redirección, CA-039).
 // Por ahora es un esqueleto: cada historia de usuario irá agregando sus pantallas aquí.
-export function RoleHome({ rol }) {
-  const navigate = useNavigate()
-  const { session, logout } = useAuth()
-  const info = ROLES[rol]
-  const variosRoles = session.roles.length > 1
+export function InicioRol({ rol }) {
+  const navegar = useNavigate()
+  const { sesion, cerrarSesion } = useAutenticacion()
+  const informacion = ROLES_DISPONIBLES[rol]
+  const variosRoles = sesion.roles.length > 1
 
   return (
     <div className="min-h-dvh bg-page font-sans text-fg">
@@ -18,12 +18,12 @@ export function RoleHome({ rol }) {
           <Marca compacta />
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             <span className="text-muted">
-              {session.user.nombre} · <strong className="font-semibold text-fg">{info.label}</strong>
+              {sesion.usuario.nombre} · <strong className="font-semibold text-fg">{informacion.nombre}</strong>
             </span>
             {variosRoles && (
               <button
                 type="button"
-                onClick={() => navigate(RUTA_ELEGIR_ROL)}
+                onClick={() => navegar(RUTA_ELEGIR_ROL)}
                 className="font-semibold underline underline-offset-4 hover:text-highlight"
               >
                 Cambiar de rol
@@ -31,7 +31,7 @@ export function RoleHome({ rol }) {
             )}
             <button
               type="button"
-              onClick={logout}
+              onClick={cerrarSesion}
               className="font-semibold underline underline-offset-4 hover:text-highlight"
             >
               Cerrar sesión
@@ -41,13 +41,13 @@ export function RoleHome({ rol }) {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-rise">
-        <h1 className="font-display text-4xl font-extrabold tracking-tight">Panel de {info.label.toLowerCase()}</h1>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight">Panel de {informacion.nombre.toLowerCase()}</h1>
         <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
-        <p className="mt-3 max-w-prose text-muted">{info.descripcion}</p>
+        <p className="mt-3 max-w-prose text-muted">{informacion.descripcion}</p>
 
         <h2 className="mt-10 font-display text-xl font-bold">Disponible para este rol</h2>
         <ul className="mt-3 max-w-prose divide-y divide-line border-y border-line">
-          {info.funciones.map((funcion) => (
+          {informacion.funciones.map((funcion) => (
             <li key={funcion} className="flex items-center justify-between gap-4 py-3">
               <span>{funcion}</span>
               <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">Próximamente</span>
