@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .captcha import captcha_es_valido
 from .roles import roles_de
 
 
@@ -28,6 +29,12 @@ class LoginSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    captcha_token = serializers.CharField(write_only=True)
+
+    def validate_captcha_token(self, token):
+        if not captcha_es_valido(token):
+            raise serializers.ValidationError('El CAPTCHA no es válido. Márcalo de nuevo.')
+        return token
 
 
 def autenticar(email, password):
