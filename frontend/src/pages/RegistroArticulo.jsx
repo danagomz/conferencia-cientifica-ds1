@@ -26,6 +26,38 @@ function fechaLegible(fecha) {
   })
 }
 
+function validarDatosArticulo({ titulo, resumen, palabrasClave, convocatoriaId, lineaTematica, autores }) {
+  const errores = []
+  if (!titulo.trim()) errores.push('El título del artículo es obligatorio.')
+  if (!resumen.trim()) errores.push('El resumen del artículo es obligatorio.')
+  if (!palabrasClave.trim()) errores.push('Ingresa al menos una palabra clave.')
+  if (!convocatoriaId) errores.push('Selecciona una convocatoria.')
+  if (!lineaTematica) errores.push('Selecciona una línea temática disponible.')
+  if (autores.filter((autor) => autor.responsable).length !== 1) {
+    errores.push('Selecciona exactamente un autor responsable de las versiones.')
+  }
+
+  const correos = []
+  autores.forEach((autor, indice) => {
+    const numeroAutor = indice + 1
+    if (!autor.nombres.trim()) errores.push(`Ingresa los nombres del autor ${numeroAutor}.`)
+    if (!autor.apellidos.trim()) errores.push(`Ingresa los apellidos del autor ${numeroAutor}.`)
+    if (!autor.institucion.trim()) errores.push(`Ingresa la afiliación del autor ${numeroAutor}.`)
+
+    const correo = autor.email.trim().toLowerCase()
+    if (!correo) {
+      errores.push(`Ingresa el correo electrónico del autor ${numeroAutor}.`)
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      errores.push(`El correo electrónico del autor ${numeroAutor} no es válido.`)
+    } else if (correos.includes(correo)) {
+      errores.push('Los correos electrónicos de los autores deben ser diferentes.')
+    }
+    correos.push(correo)
+  })
+
+  return errores
+}
+
 export function RegistroArticulo() {
   const { sesion } = useAutenticacion()
   const [contexto, establecerContexto] = useState(null)
@@ -77,6 +109,12 @@ export function RegistroArticulo() {
     (convocatoria) => String(convocatoria.id) === convocatoriaId,
   )
   const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas ?? []
+  const datosAutorActualCompletos = Boolean(
+    contexto?.autor_actual?.nombres?.trim()
+      && contexto?.autor_actual?.apellidos?.trim()
+      && contexto?.autor_actual?.email?.trim()
+      && contexto?.autor_actual?.institucion?.trim(),
+  )
 
   function cambiarConvocatoria(valor) {
     establecerConvocatoriaId(valor)
@@ -117,6 +155,18 @@ export function RegistroArticulo() {
   async function enviarFormulario(evento) {
     evento.preventDefault()
     establecerError('')
+    const erroresValidacion = validarDatosArticulo({
+      titulo,
+      resumen,
+      palabrasClave,
+      convocatoriaId,
+      lineaTematica,
+      autores,
+    })
+    if (erroresValidacion.length) {
+      establecerError(erroresValidacion.join(' '))
+      return
+    }
     establecerEnviando(true)
     try {
       const creado = await registrarArticulo({
@@ -363,6 +413,12 @@ export function RegistroArticulo() {
                     </button>
                   </div>
 
+                  {!datosAutorActualCompletos && (
+                    <p role="alert" className="mt-5 border border-highlight bg-soft px-4 py-3 text-sm">
+                      Completa tu nombre, apellido y afiliación universitaria en tu perfil antes de registrar el artículo.
+                    </p>
+                  )}
+
                   <div className="mt-5 space-y-4">
                     {autores.map((autor, indice) => (
                       <fieldset key={autor.id} className="border border-line bg-panel p-5 sm:p-7">
@@ -489,7 +545,7 @@ export function RegistroArticulo() {
                   </Link>
                   <button
                     type="submit"
-                    disabled={enviando || !lineaTematica}
+                    disabled={enviando || !lineaTematica || !datosAutorActualCompletos}
                     className="min-h-12 bg-brand px-7 font-semibold text-brand-fg transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {enviando ? 'Registrando artículo…' : 'Registrar propuesta'}
