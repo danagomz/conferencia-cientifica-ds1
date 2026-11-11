@@ -60,6 +60,13 @@ class RegistrarArticuloTests(APITestCase):
         self.linea_otra = LineaTematica.objects.create(id_conferencia=self.otra, nombre='Redes')
         self.plazo = self.crear_plazo(self.conf, -5, 5)
         self.autor = usuario_con_rol('autor@x.co', 'AUTOR')
+        self.autor.first_name = 'Ana'
+        self.autor.last_name = 'Pérez'
+        self.autor.save(update_fields=['first_name', 'last_name'])
+        self.perfil_autor = PerfilUsuario.objects.create(
+            usuario=self.autor,
+            institucion='Universidad del Valle',
+        )
         self.comite = usuario_con_rol('comite@x.co', 'COMITE')
         self.datos = {
             'id_conferencia': self.conf.id_conferencia,
@@ -119,6 +126,39 @@ class RegistrarArticuloTests(APITestCase):
         for campo in ('id_linea', 'titulo', 'resumen', 'palabras_clave'):
             self.assertIn(campo, r.data)
 
+    def test_campos_del_articulo_solo_con_espacios_se_rechazan(self):
+        self.client.force_authenticate(self.autor)
+        for campo in ('titulo', 'resumen', 'palabras_clave'):
+            with self.subTest(campo=campo):
+                respuesta = self.client.post(
+                    URL,
+                    {**self.datos, campo: '   '},
+                    format='json',
+                )
+                self.assertEqual(respuesta.status_code, 400)
+                self.assertIn(campo, respuesta.data)
+        self.assertEqual(Articulo.objects.count(), 0)
+
+    def test_autor_registrador_debe_tener_perfil_completo(self):
+        self.client.force_authenticate(self.autor)
+        for campo in ('first_name', 'last_name'):
+            with self.subTest(campo=campo):
+                valor_original = getattr(self.autor, campo)
+                setattr(self.autor, campo, ' ')
+                self.autor.save(update_fields=[campo])
+                respuesta = self.client.post(URL, self.datos, format='json')
+                self.assertEqual(respuesta.status_code, 400)
+                self.assertIn('autor_registra', respuesta.data)
+                setattr(self.autor, campo, valor_original)
+                self.autor.save(update_fields=[campo])
+
+        self.perfil_autor.institucion = ' '
+        self.perfil_autor.save(update_fields=['institucion'])
+        respuesta = self.client.post(URL, self.datos, format='json')
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('autor_registra', respuesta.data)
+        self.assertEqual(Articulo.objects.count(), 0)
+
     def test_conferencia_inexistente(self):
         self.client.force_authenticate(self.autor)
         self.datos['id_conferencia'] = 9999
@@ -161,9 +201,6 @@ class RegistrarArticuloTests(APITestCase):
 
     # ---- SDGC-129: asociación del artículo con su autor ----
     def test_articulo_queda_asociado_al_autor_responsable(self):
-        self.autor.first_name, self.autor.last_name = 'Ana', 'Pérez'
-        self.autor.save()
-        PerfilUsuario.objects.create(usuario=self.autor, institucion='Univalle')
         self.client.force_authenticate(self.autor)
         r = self.client.post(URL, self.datos, format='json')
         self.assertEqual(r.status_code, 201)
@@ -173,7 +210,7 @@ class RegistrarArticuloTests(APITestCase):
         self.assertEqual(a.id_usuario, self.autor)
         self.assertEqual((a.nombres, a.apellidos), ('Ana', 'Pérez'))
         self.assertEqual(a.email, 'autor@x.co')
-        self.assertEqual(a.institucion, 'Univalle')
+        self.assertEqual(a.institucion, 'Universidad del Valle')
         self.assertEqual(a.orden_autoria, 1)
         self.assertTrue(a.es_responsable)
 
@@ -183,11 +220,14 @@ class RegistrarArticuloTests(APITestCase):
         self.assertEqual(len(r.data['autores']), 1)
         self.assertTrue(r.data['autores'][0]['es_responsable'])
 
-    def test_autor_sin_perfil_no_rompe_el_registro(self):
+    def test_autor_sin_perfil_no_puede_registrar(self):
+        self.perfil_autor.delete()
+        self.autor.refresh_from_db()
         self.client.force_authenticate(self.autor)
         r = self.client.post(URL, self.datos, format='json')
-        self.assertEqual(r.status_code, 201)
-        self.assertEqual(r.data['autores'][0]['institucion'], '')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('autor_registra', r.data)
+        self.assertEqual(Articulo.objects.count(), 0)
 
     def test_articulo_rechazado_no_deja_autores_huerfanos(self):
         self.client.force_authenticate(self.autor)
@@ -239,6 +279,21 @@ class RegistrarArticuloTests(APITestCase):
         self.assertEqual(r.status_code, 400)
         for campo in ('apellidos', 'email', 'institucion'):
             self.assertIn(campo, r.data['coautores'][0])
+
+    def test_datos_del_coautor_solo_con_espacios_se_rechazan(self):
+        self.client.force_authenticate(self.autor)
+        self.datos['coautores'] = [{
+            'nombres': ' ',
+            'apellidos': 'Gil',
+            'email': 'coautor@x.co',
+            'institucion': 'UNAL',
+        }]
+
+        respuesta = self.client.post(URL, self.datos, format='json')
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('nombres', respuesta.data['coautores'][0])
+        self.assertEqual(Articulo.objects.count(), 0)
 
     def test_correos_repetidos_se_rechazan(self):
         self.client.force_authenticate(self.autor)

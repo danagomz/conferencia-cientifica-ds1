@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 // ════════════════════════════════════════════════════════════════
 //  CAPA DE SOLICITUDES HTTP  ·  único lugar que conoce el backend
 // ════════════════════════════════════════════════════════════════
@@ -24,20 +26,23 @@ const RUTA_CONTEXTO_ARTICULOS = `${URL_API}/articulos/contexto/`
 const RUTA_REGISTRAR_ARTICULO = `${URL_API}/articulos/`
 
 export async function obtenerContextoArticulos(token) {
-  let respuesta
   try {
-    respuesta = await fetch(RUTA_CONTEXTO_ARTICULOS, {
+    const respuesta = await axios.get(RUTA_CONTEXTO_ARTICULOS, {
       headers: { Authorization: `Bearer ${token}` },
     })
-  } catch {
-    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+    return respuesta.data
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error
+    throw new Error(
+      mensajeErrorApi(
+        error.response?.data,
+        error.response
+          ? 'No se pudo cargar la información de la convocatoria.'
+          : 'No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.',
+      ),
+      { cause: error },
+    )
   }
-
-  const datos = await respuesta.json().catch(() => null)
-  if (!respuesta.ok) {
-    throw new Error(mensajeErrorApi(datos, 'No se pudo cargar la información de la convocatoria.'))
-  }
-  return datos
 }
 
 export async function registrarArticulo({
@@ -48,39 +53,44 @@ export async function registrarArticulo({
   convocatoriaId,
   lineaTematica,
   autores,
+  responsableClave,
 }) {
-  let respuesta
   try {
-    respuesta = await fetch(RUTA_REGISTRAR_ARTICULO, {
+    const respuesta = await axios({
+      url: RUTA_REGISTRAR_ARTICULO,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
+      data: {
         id_conferencia: Number(convocatoriaId),
         id_linea: Number(lineaTematica),
         titulo: titulo.trim(),
         resumen: resumen.trim(),
         palabras_clave: palabrasClave.trim(),
-        coautores: autores.slice(1).map(({ nombres, apellidos, email, institucion, responsable }) => ({
+        coautores: autores.slice(1).map(({ clave, nombres, apellidos, email, institucion }) => ({
           nombres: nombres.trim(),
           apellidos: apellidos.trim(),
           email: email.trim().toLowerCase(),
           institucion: institucion.trim(),
-          es_responsable: responsable,
+          es_responsable: clave === responsableClave,
         })),
-      }),
+      },
     })
-  } catch {
-    throw new Error('No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.')
+    return respuesta.data
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error
+    throw new Error(
+      mensajeErrorApi(
+        error.response?.data,
+        error.response
+          ? 'No se pudo registrar el artículo. Revisa los datos e inténtalo otra vez.'
+          : 'No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.',
+      ),
+      { cause: error },
+    )
   }
-
-  const datos = await respuesta.json().catch(() => null)
-  if (!respuesta.ok) {
-    throw new Error(mensajeErrorApi(datos, 'No se pudo registrar el artículo. Revisa los datos e inténtalo otra vez.'))
-  }
-  return datos
 }
 
 function mensajeErrorApi(datos, predeterminado) {
