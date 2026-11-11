@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { useAutenticacion } from '../autenticacion/useAutenticacion'
 import { obtenerContextoArticulos, registrarArticulo } from '../autenticacion/solicitudes'
 import { Marca } from '../components/Marca'
 
 const claseCampo =
-  'mt-2 min-h-12 w-full border border-line bg-panel px-4 text-fg outline-none transition focus:border-highlight focus:ring-2 focus:ring-highlight/20'
+  'input input-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 px-4 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20'
+const claseErrorCampo = 'mt-2 text-sm font-medium text-red-700'
 
-function nuevoAutor(id, datos = {}) {
+const CLAVE_AUTOR_REGISTRADOR = 'autor-registrador'
+
+function nuevoAutor(clave, datos = {}) {
   return {
-    id,
+    clave,
     nombres: datos.nombres ?? '',
     apellidos: datos.apellidos ?? '',
     email: datos.email ?? '',
@@ -26,52 +30,39 @@ function fechaLegible(fecha) {
   })
 }
 
-function validarDatosArticulo({ titulo, resumen, palabrasClave, convocatoriaId, lineaTematica, autores }) {
-  const errores = []
-  if (!titulo.trim()) errores.push('El título del artículo es obligatorio.')
-  if (!resumen.trim()) errores.push('El resumen del artículo es obligatorio.')
-  if (!palabrasClave.trim()) errores.push('Ingresa al menos una palabra clave.')
-  if (!convocatoriaId) errores.push('Selecciona una convocatoria.')
-  if (!lineaTematica) errores.push('Selecciona una línea temática disponible.')
-  if (autores.filter((autor) => autor.responsable).length !== 1) {
-    errores.push('Selecciona exactamente un autor responsable de las versiones.')
-  }
-
-  const correos = []
-  autores.forEach((autor, indice) => {
-    const numeroAutor = indice + 1
-    if (!autor.nombres.trim()) errores.push(`Ingresa los nombres del autor ${numeroAutor}.`)
-    if (!autor.apellidos.trim()) errores.push(`Ingresa los apellidos del autor ${numeroAutor}.`)
-    if (!autor.institucion.trim()) errores.push(`Ingresa la afiliación del autor ${numeroAutor}.`)
-
-    const correo = autor.email.trim().toLowerCase()
-    if (!correo) {
-      errores.push(`Ingresa el correo electrónico del autor ${numeroAutor}.`)
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-      errores.push(`El correo electrónico del autor ${numeroAutor} no es válido.`)
-    } else if (correos.includes(correo)) {
-      errores.push('Los correos electrónicos de los autores deben ser diferentes.')
-    }
-    correos.push(correo)
-  })
-
-  return errores
-}
-
 export function RegistroArticulo() {
   const { sesion } = useAutenticacion()
   const [contexto, establecerContexto] = useState(null)
-  const [convocatoriaId, establecerConvocatoriaId] = useState('')
-  const [lineaTematica, establecerLineaTematica] = useState('')
-  const [titulo, establecerTitulo] = useState('')
-  const [resumen, establecerResumen] = useState('')
-  const [palabrasClave, establecerPalabrasClave] = useState('')
-  const [autores, establecerAutores] = useState([nuevoAutor(0, { responsable: true })])
   const [cargando, establecerCargando] = useState(true)
   const [enviando, establecerEnviando] = useState(false)
-  const [error, establecerError] = useState('')
+  const [errorSolicitud, establecerErrorSolicitud] = useState('')
   const [articuloCreado, establecerArticuloCreado] = useState(null)
   const [siguienteId, establecerSiguienteId] = useState(1)
+  const {
+    control,
+    handleSubmit,
+    register,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      convocatoriaId: '',
+      lineaTematica: '',
+      titulo: '',
+      resumen: '',
+      palabrasClave: '',
+      responsableClave: CLAVE_AUTOR_REGISTRADOR,
+      autores: [nuevoAutor(CLAVE_AUTOR_REGISTRADOR, { responsable: true })],
+    },
+  })
+  const { fields: autores, append, remove } = useFieldArray({
+    control,
+    name: 'autores',
+  })
+  const valoresFormulario = useWatch({ control })
+  const autoresActuales = valoresFormulario.autores ?? []
+  const responsableClave = valoresFormulario.responsableClave
 
   useEffect(() => {
     let vigente = true
@@ -82,16 +73,22 @@ export function RegistroArticulo() {
         const convocatoriaInicial = datos.convocatorias.find(
           (convocatoria) => convocatoria.postulaciones_abiertas,
         )
-        if (convocatoriaInicial) {
-          establecerConvocatoriaId(String(convocatoriaInicial.id))
-          establecerLineaTematica(String(convocatoriaInicial.lineas_tematicas[0]?.id ?? ''))
-        }
-        establecerAutores([
-          nuevoAutor(0, { ...datos.autor_actual, responsable: true }),
-        ])
+        const autorRegistrador = nuevoAutor(CLAVE_AUTOR_REGISTRADOR, {
+          ...datos.autor_actual,
+          responsable: true,
+        })
+        reset({
+          convocatoriaId: String(convocatoriaInicial?.id ?? ''),
+          lineaTematica: String(convocatoriaInicial?.lineas_tematicas[0]?.id ?? ''),
+          titulo: '',
+          resumen: '',
+          palabrasClave: '',
+          responsableClave: CLAVE_AUTOR_REGISTRADOR,
+          autores: [autorRegistrador],
+        })
       })
       .catch((errorCarga) => {
-        if (vigente) establecerError(errorCarga.message)
+        if (vigente) establecerErrorSolicitud(errorCarga.message)
       })
       .finally(() => {
         if (vigente) establecerCargando(false)
@@ -100,13 +97,13 @@ export function RegistroArticulo() {
     return () => {
       vigente = false
     }
-  }, [sesion.tokenAcceso])
+  }, [reset, sesion.tokenAcceso])
 
   const convocatoriasAbiertas = contexto?.convocatorias.filter(
     (convocatoria) => convocatoria.postulaciones_abiertas,
   ) ?? []
   const convocatoriaSeleccionada = convocatoriasAbiertas.find(
-    (convocatoria) => String(convocatoria.id) === convocatoriaId,
+    (convocatoria) => String(convocatoria.id) === valoresFormulario.convocatoriaId,
   )
   const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas ?? []
   const datosAutorActualCompletos = Boolean(
@@ -117,92 +114,72 @@ export function RegistroArticulo() {
   )
 
   function cambiarConvocatoria(valor) {
-    establecerConvocatoriaId(valor)
+    setValue('convocatoriaId', valor, { shouldValidate: true, shouldDirty: true })
     const convocatoria = convocatoriasAbiertas.find(
       (opcion) => String(opcion.id) === valor,
     )
-    establecerLineaTematica(String(convocatoria?.lineas_tematicas[0]?.id ?? ''))
-  }
-
-  function actualizarAutor(id, campo, valor) {
-    establecerAutores((actuales) =>
-      actuales.map((autor) => (autor.id === id ? { ...autor, [campo]: valor } : autor)),
-    )
-  }
-
-  function marcarResponsable(id) {
-    establecerAutores((actuales) =>
-      actuales.map((autor) => ({ ...autor, responsable: autor.id === id })),
-    )
+    setValue('lineaTematica', String(convocatoria?.lineas_tematicas[0]?.id ?? ''), {
+      shouldValidate: true,
+      shouldDirty: true,
+    })
   }
 
   function agregarAutor() {
-    establecerAutores((actuales) => [...actuales, nuevoAutor(siguienteId)])
+    append(nuevoAutor(`coautor-${siguienteId}`))
     establecerSiguienteId((actual) => actual + 1)
   }
 
-  function quitarAutor(id) {
-    establecerAutores((actuales) => {
-      if (actuales.length === 1) return actuales
-      const restantes = actuales.filter((autor) => autor.id !== id)
-      if (!restantes.some((autor) => autor.responsable)) {
-        restantes[0] = { ...restantes[0], responsable: true }
-      }
-      return restantes
-    })
+  function quitarAutor(indice) {
+    if (indice === 0) return
+    const autor = autoresActuales[indice]
+    if (autor?.clave === responsableClave) {
+      setValue('responsableClave', autoresActuales[0].clave, {
+        shouldValidate: true,
+        shouldDirty: true,
+      })
+    }
+    remove(indice)
   }
 
-  async function enviarFormulario(evento) {
-    evento.preventDefault()
-    establecerError('')
-    const erroresValidacion = validarDatosArticulo({
-      titulo,
-      resumen,
-      palabrasClave,
-      convocatoriaId,
-      lineaTematica,
-      autores,
-    })
-    if (erroresValidacion.length) {
-      establecerError(erroresValidacion.join(' '))
-      return
-    }
+  async function enviarFormulario(datos) {
+    establecerErrorSolicitud('')
     establecerEnviando(true)
     try {
       const creado = await registrarArticulo({
         token: sesion.tokenAcceso,
-        titulo,
-        resumen,
-        palabrasClave,
-        convocatoriaId,
-        lineaTematica,
-        autores,
+        ...datos,
       })
       establecerArticuloCreado({
         ...creado,
         convocatoria: convocatoriaSeleccionada.nombre,
         linea_tematica: {
-          nombre: lineasDisponibles.find((linea) => String(linea.id) === lineaTematica)?.nombre ?? '',
+          nombre: lineasDisponibles.find(
+            (linea) => String(linea.id) === datos.lineaTematica,
+          )?.nombre ?? '',
         },
         fecha_limite_postulaciones: convocatoriaSeleccionada.fecha_limite_postulaciones,
       })
     } catch (errorRegistro) {
-      establecerError(errorRegistro.message)
+      establecerErrorSolicitud(errorRegistro.message)
     } finally {
       establecerEnviando(false)
     }
   }
 
   return (
-    <div className="min-h-dvh bg-page font-sans text-fg">
-      <header className="border-b border-line bg-panel">
+    <div className="relative min-h-dvh bg-[url('/fondo-crear-articulo.jpg')] bg-cover bg-center bg-fixed font-sans text-slate-900">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-50/90 via-slate-50/85 to-slate-100/80"
+      />
+      <header className="relative border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Marca compacta />
           <nav aria-label="Navegación de autor" className="flex items-center gap-4 text-sm">
-            <span className="hidden text-muted sm:inline">{sesion.usuario.nombre}</span>
+            <span className="hidden font-medium text-slate-600 sm:inline">{sesion.usuario.nombre}</span>
             <Link
               to="/autor"
-              className="border border-line px-4 py-2 font-semibold transition hover:bg-soft"
+              className="rounded-xl border border-slate-200 bg-white/80 px-4 py-2 font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white"
             >
               Volver al panel
             </Link>
@@ -210,128 +187,151 @@ export function RegistroArticulo() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-12">
+      <main className="relative mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <Link
           to="/autor"
-          className="text-sm font-semibold text-highlight underline underline-offset-4 hover:text-brand"
+          className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
         >
-          ← Panel de autor
+          <span aria-hidden="true">←</span> Panel de autor
         </Link>
 
         {articuloCreado ? (
-          <section aria-labelledby="registro-exitoso" className="mt-8 border border-line bg-panel p-6 sm:p-10">
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-highlight">
+          <section aria-labelledby="registro-exitoso" className="mt-8 rounded-3xl border border-white/80 bg-white/95 p-6 shadow-2xl backdrop-blur sm:p-10">
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
               Propuesta recibida
             </span>
-            <h1 id="registro-exitoso" className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
+            <h1 id="registro-exitoso" className="mt-3 font-display text-3xl font-extrabold text-slate-950 sm:text-4xl">
               Artículo registrado
             </h1>
-            <p role="status" className="mt-3 text-muted">
+            <p role="status" className="mt-3 text-slate-600">
               Tu propuesta quedó asociada a tu cuenta y fue enviada correctamente.
             </p>
-            <dl className="mt-7 grid gap-4 border-y border-line py-5 sm:grid-cols-2">
+            <dl className="mt-7 grid gap-4 border-y border-slate-200 py-5 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Título</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Título</dt>
                 <dd className="mt-1 font-semibold">{articuloCreado.titulo}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Convocatoria</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Convocatoria</dt>
                 <dd className="mt-1 font-semibold">{articuloCreado.convocatoria}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Línea temática</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Línea temática</dt>
                 <dd className="mt-1 font-semibold">{articuloCreado.linea_tematica.nombre}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Fecha límite</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha límite</dt>
                 <dd className="mt-1 font-semibold">{fechaLegible(articuloCreado.fecha_limite_postulaciones)}</dd>
               </div>
             </dl>
             <Link
               to="/autor"
-              className="mt-7 inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
+              className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-slate-900 px-6 font-semibold text-white shadow-lg transition hover:bg-slate-700"
             >
               Volver al panel de autor
             </Link>
           </section>
         ) : (
           <>
-            <div className="mt-7 border-b border-line pb-6">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-highlight">
-                Convocatorias científicas
-              </p>
-              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
-                Registrar un artículo
-              </h1>
-              <p className="mt-3 max-w-2xl leading-relaxed text-muted">
-                Completa la información de la propuesta, selecciona su línea temática y registra a todos sus autores.
-              </p>
+            <div className="relative mt-7 overflow-hidden rounded-none bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-8 text-white shadow-2xl sm:px-10 sm:py-11">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border border-white/10 sm:right-8 sm:top-1/2 sm:-translate-y-1/2">
+                <div className="absolute inset-5 rounded-full border border-white/10" />
+                <div className="absolute inset-10 rounded-full border border-white/10" />
+              </div>
+              <div className="relative max-w-3xl">
+                <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-slate-200">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-sky-300" />
+                  Convocatorias científicas
+                </p>
+                <h1 className="mt-5 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
+                  Registrar un artículo
+                </h1>
+                <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
+                  Completa la información de la propuesta, selecciona su línea temática y registra a todos sus autores.
+                </p>
+              </div>
             </div>
 
             {cargando ? (
-              <p role="status" className="mt-8 border border-line bg-panel p-5 text-muted">
+              <p role="status" className="mt-8 rounded-2xl border border-white/80 bg-white/95 p-5 text-slate-600 shadow-xl">
                 Cargando convocatorias disponibles…
               </p>
-            ) : error && !contexto ? (
-              <p role="alert" className="mt-8 border border-highlight bg-soft p-5">{error}</p>
+            ) : errorSolicitud && !contexto ? (
+              <p role="alert" className="alert alert-error mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900 shadow-xl">
+                {errorSolicitud}
+              </p>
             ) : convocatoriasAbiertas.length === 0 ? (
-              <section className="mt-8 border-l-4 border-highlight bg-soft p-5 sm:p-7">
-                <h2 className="font-display text-xl font-bold">
+              <section className="mt-8 rounded-2xl border border-white/80 border-l-4 border-l-slate-700 bg-white/95 p-5 shadow-xl sm:p-7">
+                <h2 className="font-display text-xl font-bold text-slate-900">
                   {contexto?.convocatorias.length
                     ? 'No hay postulaciones abiertas'
                     : 'No hay convocatorias configuradas'}
                 </h2>
-                <p className="mt-2 leading-relaxed text-muted">
+                <p className="mt-2 leading-relaxed text-slate-600">
                   {contexto?.convocatorias.length
                     ? `El plazo de la convocatoria vigente terminó el ${fechaLegible(contexto.convocatorias[0].fecha_limite_postulaciones)}.`
-                    : 'Un administrador debe crear o activar una convocatoria y agregar al menos una línea temática desde Django Admin (/admin/). Luego vuelve a cargar esta página.'}
+                    : 'El comité o un administrador debe crear una conferencia, configurar su plazo de postulación y agregar líneas temáticas. Luego vuelve a cargar esta página.'}
                 </p>
               </section>
             ) : lineasDisponibles.length === 0 ? (
-              <section className="mt-8 border-l-4 border-highlight bg-soft p-5 sm:p-7">
-                <h2 className="font-display text-xl font-bold">No hay líneas temáticas disponibles</h2>
-                <p className="mt-2 text-muted">
+              <section className="mt-8 rounded-2xl border border-white/80 border-l-4 border-l-slate-700 bg-white/95 p-5 shadow-xl sm:p-7">
+                <h2 className="font-display text-xl font-bold text-slate-900">No hay líneas temáticas disponibles</h2>
+                <p className="mt-2 text-slate-600">
                   La convocatoria está abierta, pero aún no tiene líneas temáticas habilitadas.
                 </p>
               </section>
             ) : (
-              <form onSubmit={enviarFormulario} className="mt-8 space-y-8">
-                <section aria-labelledby="datos-articulo">
-                  <div className="flex items-center gap-3">
-                    <span className="font-display text-2xl font-bold text-highlight">01</span>
-                    <h2 id="datos-articulo" className="font-display text-xl font-bold">
-                      Datos de la propuesta
-                    </h2>
-                  </div>
-                  <div className="mt-5 grid gap-5 border border-line bg-panel p-5 sm:p-7">
+              <form noValidate onSubmit={handleSubmit(enviarFormulario)} className="mt-7 space-y-6">
+                <section aria-labelledby="datos-articulo" className="rounded-2xl border border-white/80 bg-white/95 p-5 shadow-xl backdrop-blur-sm sm:p-8">
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-md">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 4.75A2.75 2.75 0 0 1 7.75 2H20v17H7.75A2.75 2.75 0 0 0 5 21.75m0-17v17m0-17h11M8.5 7h8m-8 3.5h8" />
+                      </svg>
+                    </span>
                     <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">01 · Información académica</p>
+                      <h2 id="datos-articulo" className="mt-1 font-display text-xl font-bold text-slate-950 sm:text-2xl">
+                        Datos de la propuesta
+                      </h2>
+                    </div>
+                  </div>
+                  <div className="mt-7 grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
                       <label htmlFor="titulo-articulo" className="text-sm font-semibold">
                         Nombre del artículo <span aria-hidden="true">*</span>
                       </label>
                       <input
                         id="titulo-articulo"
                         type="text"
-                        required
-                        maxLength={250}
-                        value={titulo}
-                        onChange={(evento) => establecerTitulo(evento.target.value)}
+                        maxLength={255}
+                        aria-invalid={Boolean(errors.titulo)}
+                        {...register('titulo', {
+                          required: 'El título del artículo es obligatorio.',
+                          validate: (valor) => valor.trim() !== '' || 'El título no puede contener solo espacios.',
+                          maxLength: { value: 255, message: 'El título no puede superar los 255 caracteres.' },
+                        })}
                         placeholder="Escribe el título de tu propuesta"
                         className={claseCampo}
                       />
+                      {errors.titulo && <p className={claseErrorCampo}>{errors.titulo.message}</p>}
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label htmlFor="resumen-articulo" className="text-sm font-semibold">
                         Resumen <span aria-hidden="true">*</span>
                       </label>
                       <textarea
                         id="resumen-articulo"
-                        required
                         rows={5}
-                        value={resumen}
-                        onChange={(evento) => establecerResumen(evento.target.value)}
+                        aria-invalid={Boolean(errors.resumen)}
+                        {...register('resumen', {
+                          required: 'El resumen del artículo es obligatorio.',
+                          validate: (valor) => valor.trim() !== '' || 'El resumen no puede contener solo espacios.',
+                        })}
                         placeholder="Describe brevemente el objetivo y aporte de la propuesta"
-                        className={`${claseCampo} py-3`}
+                        className={`textarea textarea-bordered mt-2 min-h-36 w-full rounded-none border-slate-300 bg-slate-100 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20 ${errors.resumen ? 'textarea-error' : ''}`}
                       />
+                      {errors.resumen && <p className={claseErrorCampo}>{errors.resumen.message}</p>}
                     </div>
                     <div>
                       <label htmlFor="palabras-clave" className="text-sm font-semibold">
@@ -340,12 +340,17 @@ export function RegistroArticulo() {
                       <input
                         id="palabras-clave"
                         type="text"
-                        required
-                        value={palabrasClave}
-                        onChange={(evento) => establecerPalabrasClave(evento.target.value)}
+                        aria-invalid={Boolean(errors.palabrasClave)}
+                        {...register('palabrasClave', {
+                          required: 'Ingresa al menos una palabra clave.',
+                          validate: (valor) => valor.trim() !== '' || 'Ingresa al menos una palabra clave.',
+                        })}
                         placeholder="Separadas por comas"
                         className={claseCampo}
                       />
+                      {errors.palabrasClave && (
+                        <p className={claseErrorCampo}>{errors.palabrasClave.message}</p>
+                      )}
                     </div>
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div>
@@ -354,10 +359,12 @@ export function RegistroArticulo() {
                         </label>
                         <select
                           id="convocatoria"
-                          required
-                          value={convocatoriaId}
+                          aria-invalid={Boolean(errors.convocatoriaId)}
+                          {...register('convocatoriaId', {
+                            required: 'Selecciona una convocatoria con postulaciones abiertas.',
+                          })}
                           onChange={(evento) => cambiarConvocatoria(evento.target.value)}
-                          className={`${claseCampo} rounded-none`}
+                          className="select select-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 text-slate-900 focus:border-slate-600 focus:bg-white"
                         >
                           {convocatoriasAbiertas.map((convocatoria) => (
                             <option key={convocatoria.id} value={convocatoria.id}>
@@ -365,8 +372,11 @@ export function RegistroArticulo() {
                             </option>
                           ))}
                         </select>
+                          {errors.convocatoriaId && (
+                            <p className={claseErrorCampo}>{errors.convocatoriaId.message}</p>
+                          )}
                         {convocatoriaSeleccionada && (
-                          <p className="mt-2 text-xs text-muted">
+                          <p className="mt-2 text-xs text-slate-500">
                             Fecha límite: {fechaLegible(convocatoriaSeleccionada.fecha_limite_postulaciones)}
                           </p>
                         )}
@@ -377,29 +387,38 @@ export function RegistroArticulo() {
                         </label>
                         <select
                           id="linea-tematica"
-                          required
-                          value={lineaTematica}
-                          onChange={(evento) => establecerLineaTematica(evento.target.value)}
-                          className={`${claseCampo} rounded-none`}
+                          aria-invalid={Boolean(errors.lineaTematica)}
+                          {...register('lineaTematica', {
+                            required: 'Selecciona una línea temática habilitada.',
+                          })}
+                          className="select select-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 text-slate-900 focus:border-slate-600 focus:bg-white"
                         >
                           {lineasDisponibles.map((linea) => (
                             <option key={linea.id} value={linea.id}>{linea.nombre}</option>
                           ))}
                         </select>
+                        {errors.lineaTematica && (
+                          <p className={claseErrorCampo}>{errors.lineaTematica.message}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section aria-labelledby="datos-autores">
+                <section aria-labelledby="datos-autores" className="rounded-2xl border border-white/80 bg-white/95 p-5 shadow-xl backdrop-blur-sm sm:p-8">
                   <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-display text-2xl font-bold text-highlight">02</span>
+                    <div className="flex items-center gap-4">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-slate-800">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m16 0v-2a4 4 0 0 0-3-3.87M14 3.13a4 4 0 0 1 0 7.75M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+                        </svg>
+                      </span>
                       <div>
-                        <h2 id="datos-autores" className="font-display text-xl font-bold">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">02 · Equipo de investigación</p>
+                        <h2 id="datos-autores" className="mt-1 font-display text-xl font-bold text-slate-950 sm:text-2xl">
                           Autores del artículo
                         </h2>
-                        <p className="mt-1 text-sm text-muted">
+                        <p className="mt-1 max-w-xl text-sm text-slate-600">
                           Agrega a todos los autores e identifica quién gestionará las versiones.
                         </p>
                       </div>
@@ -407,116 +426,159 @@ export function RegistroArticulo() {
                     <button
                       type="button"
                       onClick={agregarAutor}
-                      className="min-h-10 border border-highlight px-4 text-sm font-semibold text-highlight transition hover:bg-soft"
+                      className="btn min-h-11 rounded-xl border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-500 hover:bg-slate-50"
                     >
                       + Agregar autor
                     </button>
                   </div>
 
                   {!datosAutorActualCompletos && (
-                    <p role="alert" className="mt-5 border border-highlight bg-soft px-4 py-3 text-sm">
+                    <p role="alert" className="alert alert-warning mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                       Completa tu nombre, apellido y afiliación universitaria en tu perfil antes de registrar el artículo.
                     </p>
                   )}
 
-                  <div className="mt-5 space-y-4">
+                  <div className="mt-6 space-y-4">
                     {autores.map((autor, indice) => (
-                      <fieldset key={autor.id} className="border border-line bg-panel p-5 sm:p-7">
-                        <legend className="px-2 font-semibold">
+                      <fieldset key={autor.id} className="card rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm sm:p-7">
+                        <legend className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-bold text-slate-700">
                           Autor {String(indice + 1).padStart(2, '0')}
                         </legend>
                         <div className="grid gap-5 sm:grid-cols-2">
                           <div>
-                            <label htmlFor={`autor-nombres-${autor.id}`} className="text-sm font-semibold">
+                            <label htmlFor={`autor-nombres-${autor.clave}`} className="text-sm font-semibold">
                               Nombres <span aria-hidden="true">*</span>
                             </label>
                             <input
-                              id={`autor-nombres-${autor.id}`}
+                              id={`autor-nombres-${autor.clave}`}
                               type="text"
-                              required
                               maxLength={150}
                               autoComplete="given-name"
                               readOnly={indice === 0}
-                              value={autor.nombres}
-                              onChange={(evento) => actualizarAutor(autor.id, 'nombres', evento.target.value)}
+                              aria-invalid={Boolean(errors.autores?.[indice]?.nombres)}
+                              {...register(`autores.${indice}.nombres`, {
+                                required: 'Los nombres son obligatorios.',
+                                validate: (valor) => valor.trim() !== '' || 'Los nombres no pueden contener solo espacios.',
+                              })}
                               placeholder="Nombres"
                               className={claseCampo}
                             />
+                            {errors.autores?.[indice]?.nombres && (
+                              <p className={claseErrorCampo}>{errors.autores[indice].nombres.message}</p>
+                            )}
                           </div>
                           <div>
-                            <label htmlFor={`autor-apellidos-${autor.id}`} className="text-sm font-semibold">
+                            <label htmlFor={`autor-apellidos-${autor.clave}`} className="text-sm font-semibold">
                               Apellidos <span aria-hidden="true">*</span>
                             </label>
                             <input
-                              id={`autor-apellidos-${autor.id}`}
+                              id={`autor-apellidos-${autor.clave}`}
                               type="text"
-                              required
                               maxLength={150}
                               autoComplete="family-name"
                               readOnly={indice === 0}
-                              value={autor.apellidos}
-                              onChange={(evento) => actualizarAutor(autor.id, 'apellidos', evento.target.value)}
+                              aria-invalid={Boolean(errors.autores?.[indice]?.apellidos)}
+                              {...register(`autores.${indice}.apellidos`, {
+                                required: 'Los apellidos son obligatorios.',
+                                validate: (valor) => valor.trim() !== '' || 'Los apellidos no pueden contener solo espacios.',
+                              })}
                               placeholder="Apellidos"
                               className={claseCampo}
                             />
+                            {errors.autores?.[indice]?.apellidos && (
+                              <p className={claseErrorCampo}>{errors.autores[indice].apellidos.message}</p>
+                            )}
                           </div>
                           <div>
-                            <label htmlFor={`autor-email-${autor.id}`} className="text-sm font-semibold">
+                            <label htmlFor={`autor-email-${autor.clave}`} className="text-sm font-semibold">
                               Correo electrónico <span aria-hidden="true">*</span>
                             </label>
                             <input
-                              id={`autor-email-${autor.id}`}
+                              id={`autor-email-${autor.clave}`}
                               type="email"
-                              required
                               maxLength={254}
                               autoComplete="email"
                               readOnly={indice === 0}
-                              value={autor.email}
-                              onChange={(evento) => actualizarAutor(autor.id, 'email', evento.target.value)}
+                              aria-invalid={Boolean(errors.autores?.[indice]?.email)}
+                              {...register(`autores.${indice}.email`, {
+                                required: 'El correo electrónico es obligatorio.',
+                                pattern: {
+                                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                  message: 'Ingresa un correo electrónico válido.',
+                                },
+                                validate: (valor) => (
+                                  autoresActuales.every(
+                                    (otroAutor, otroIndice) => (
+                                      otroIndice === indice
+                                      || otroAutor.email.trim().toLowerCase() !== valor.trim().toLowerCase()
+                                    ),
+                                  ) || 'Cada autor debe tener un correo electrónico diferente.'
+                                ),
+                              })}
                               placeholder="autor@universidad.edu"
                               className={claseCampo}
                             />
+                            {errors.autores?.[indice]?.email && (
+                              <p className={claseErrorCampo}>{errors.autores[indice].email.message}</p>
+                            )}
                           </div>
-                          <div className="sm:col-span-2">
-                            <label htmlFor={`autor-afiliacion-${autor.id}`} className="text-sm font-semibold">
+                          <div>
+                            <label htmlFor={`autor-afiliacion-${autor.clave}`} className="text-sm font-semibold">
                               Afiliación universitaria <span aria-hidden="true">*</span>
                             </label>
                             <input
-                              id={`autor-afiliacion-${autor.id}`}
+                              id={`autor-afiliacion-${autor.clave}`}
                               type="text"
-                              required
                               maxLength={200}
                               autoComplete="organization"
                               readOnly={indice === 0}
-                              value={autor.institucion}
-                              onChange={(evento) => actualizarAutor(autor.id, 'institucion', evento.target.value)}
+                              aria-invalid={Boolean(errors.autores?.[indice]?.institucion)}
+                              {...register(`autores.${indice}.institucion`, {
+                                required: 'La afiliación universitaria es obligatoria.',
+                                validate: (valor) => valor.trim() !== '' || 'La afiliación no puede contener solo espacios.',
+                              })}
                               placeholder="Universidad o institución"
                               className={claseCampo}
                             />
+                            {errors.autores?.[indice]?.institucion && (
+                              <p className={claseErrorCampo}>
+                                {errors.autores[indice].institucion.message}
+                              </p>
+                            )}
                           </div>
                         </div>
 
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
+                        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-4">
                           <label className="flex cursor-pointer items-start gap-3 text-sm">
                             <input
                               type="radio"
-                              name="autor-responsable"
-                              checked={autor.responsable}
-                              onChange={() => marcarResponsable(autor.id)}
-                              className="mt-0.5 h-4 w-4 accent-[#02111B]"
+                              value={autor.clave}
+                              checked={responsableClave === autor.clave}
+                              {...register('responsableClave', {
+                                required: 'Selecciona un autor responsable de las versiones.',
+                                validate: (clave) => (
+                                  autoresActuales.some((autorActual) => autorActual.clave === clave)
+                                  || 'Selecciona un autor responsable de las versiones.'
+                                ),
+                              })}
+                              onChange={() => setValue('responsableClave', autor.clave, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              })}
+                              className="radio radio-primary mt-0.5"
                             />
                             <span>
-                              <span className="block font-semibold">Responsable de versiones</span>
-                              <span className="mt-1 block text-muted">
+                              <span className="block font-semibold text-slate-900">Responsable de versiones</span>
+                              <span className="mt-1 block text-slate-600">
                                 Cargará y gestionará las versiones del artículo.
                               </span>
                             </span>
                           </label>
-                          {autores.length > 1 && (
+                          {indice > 0 && (
                             <button
                               type="button"
-                              onClick={() => quitarAutor(autor.id)}
-                              className="text-sm font-semibold text-highlight underline underline-offset-4 hover:text-brand"
+                              onClick={() => quitarAutor(indice)}
+                              className="btn btn-ghost btn-sm rounded-lg text-sm font-semibold text-red-700 hover:bg-red-50"
                               aria-label={`Quitar autor ${indice + 1}`}
                             >
                               Quitar autor
@@ -526,27 +588,32 @@ export function RegistroArticulo() {
                       </fieldset>
                     ))}
                   </div>
-                  <p className="mt-3 text-sm text-muted">
+                  {errors.responsableClave && (
+                    <p role="alert" className={claseErrorCampo}>
+                      {errors.responsableClave.message}
+                    </p>
+                  )}
+                  <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-sm text-slate-700">
                     Los coautores pueden participar aunque no tengan una cuenta en la plataforma.
                   </p>
                 </section>
 
-                {error && (
-                  <p role="alert" className="border border-highlight bg-soft px-4 py-3 text-sm">
-                    {error}
+                {errorSolicitud && (
+                  <p role="alert" className="alert alert-error rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                    {errorSolicitud}
                   </p>
                 )}
-                <div className="flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-white/80 pt-6 sm:flex-row sm:justify-end">
                   <Link
                     to="/autor"
-                    className="inline-flex min-h-12 items-center justify-center border border-line px-6 font-semibold transition hover:bg-soft"
+                    className="inline-flex min-h-12 items-center justify-center rounded-none border border-slate-300 bg-white/90 px-6 font-semibold text-slate-700 transition hover:bg-white"
                   >
                     Cancelar
                   </Link>
                   <button
                     type="submit"
-                    disabled={enviando || !lineaTematica || !datosAutorActualCompletos}
-                    className="min-h-12 bg-brand px-7 font-semibold text-brand-fg transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={enviando || !valoresFormulario.lineaTematica || !datosAutorActualCompletos}
+                    className="btn min-h-12 rounded-none border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {enviando ? 'Registrando artículo…' : 'Registrar propuesta'}
                   </button>
