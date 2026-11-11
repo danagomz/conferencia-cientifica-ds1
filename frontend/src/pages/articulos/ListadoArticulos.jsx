@@ -1,6 +1,46 @@
 import { Marca } from "../../components/Marca";
 
 function ListadoArticulos() {
+  // Datos de prueba
+  const articulos = [
+    {
+      id: 1,
+      titulo: "Optimización de modelos de lenguaje para el análisis de datos",
+      autor: "María González",
+      linea: "Sistemas Inteligentes",
+      fecha: "12 Oct 2023",
+      estado: "En revisión",
+      estadoClases: "border-l-brand bg-brand/5 text-brand",
+    },
+    {
+      id: 2,
+      titulo: "Arquitecturas de microservicios escalables en la nube",
+      autor: "Carlos Rodríguez",
+      linea: "Tecnologías en Informática",
+      fecha: "05 Nov 2023",
+      estado: "Aceptado",
+      estadoClases: "border-l-highlight bg-highlight/10 text-highlight",
+    },
+    {
+      id: 3,
+      titulo: "Impacto de la gamificación en el aprendizaje de algoritmos",
+      autor: "Ana Martínez",
+      linea: "Educación en Informática",
+      fecha: "20 Nov 2023",
+      estado: "En revisión",
+      estadoClases: "border-l-brand bg-brand/5 text-brand",
+    },
+    {
+      id: 4,
+      titulo: "Metodologías ágiles aplicadas al desarrollo de software seguro",
+      autor: "Luis Pérez",
+      linea: "Software en la práctica",
+      fecha: "01 Dic 2023",
+      estado: "Rechazado",
+      estadoClases: "border-l-muted bg-muted/5 text-muted",
+    },
+  ];
+
   return (
     <div className="relative min-h-screen bg-page font-sans text-fg antialiased selection:bg-brand selection:text-brand-fg">
       {/* Barra superior*/}
@@ -24,7 +64,7 @@ function ListadoArticulos() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto max-w-7xl px-6 py-10">
         <nav className="mb-6 flex items-center gap-1.5 text-xs text-muted">
           <svg
             aria-hidden="true"
@@ -76,105 +116,106 @@ function ListadoArticulos() {
           <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
 
           {/* Filtros */}
-          <div className="flex items-center border-b border-line bg-soft/20 px-4 py-3">
-            <div className="inline-flex items-center gap-1 rounded-lg border border-line/50 bg-soft/60 p-1">
-              <span className="inline-flex cursor-default items-center gap-2 rounded-md border border-line/50 bg-panel px-3 py-1.5 text-xs font-semibold text-brand shadow-sm">
+          <div className="flex w-full items-center overflow-x-auto border-b border-line bg-soft/20 px-4 py-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line/50 bg-soft/60 p-1">
+              <span className="inline-flex cursor-default items-center gap-2 whitespace-nowrap rounded-md border border-line/50 bg-panel px-3 py-1.5 text-xs font-semibold text-brand shadow-sm">
                 Todos
                 <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-brand-fg">
-                  0
+                  4
                 </span>
               </span>
 
-              <span className="inline-flex cursor-default items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
+              <span className="inline-flex cursor-default items-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
                 En revisión
               </span>
-              <span className="inline-flex cursor-default items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
+              <span className="inline-flex cursor-default items-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
                 Aceptados
               </span>
-              <span className="inline-flex cursor-default items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
+              <span className="inline-flex cursor-default items-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
                 Rechazados
               </span>
             </div>
           </div>
 
           {/* Barra Buscador */}
-          <div className="flex flex-col gap-3 border-b border-line border-l-4 border-l-brand bg-soft/10 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 border-b border-line border-l-4 border-l-brand bg-soft/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <h2 className="text-base font-semibold text-fg">
               Listado de artículos
             </h2>
 
-            <div className="flex items-center gap-2.5">
-              <span className="pointer-events-none inline-flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs text-muted opacity-70">
-                <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
+            <div className="flex w-full sm:w-auto">
+              <span className="pointer-events-none flex w-full items-center gap-2 rounded-md border border-line bg-panel px-4 py-2 text-sm text-muted opacity-80 sm:w-64 transition-colors hover:border-highlight/50">
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
                   <circle
                     cx="7"
                     cy="7"
                     r="4.5"
                     stroke="currentColor"
-                    strokeWidth="1.4"
+                    strokeWidth="1.5"
                   />
                   <path
                     d="M10.5 10.5L13 13"
                     stroke="currentColor"
-                    strokeWidth="1.4"
+                    strokeWidth="1.5"
                     strokeLinecap="round"
                   />
                 </svg>
-                Buscar…
-              </span>
-
-              {/* Contador */}
-              <span className="inline-flex items-center gap-1.5 rounded-none border border-highlight/20 bg-highlight/10 px-2.5 py-1 text-xs font-bold text-highlight tabular-nums">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-highlight opacity-100" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-highlight" />
-                </span>
-                0 registros
+                Buscar artículos...
               </span>
             </div>
           </div>
 
-          {/* titulos columnas */}
-          <div className="hidden grid-cols-[1fr_140px_100px_110px] gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid">
+          {/* Títulos columnas */}
+          <div className="hidden grid-cols-[1fr_140px_190px_100px_110px] gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid">
             <span>Título</span>
             <span>Autor</span>
+            <span>Línea Temática</span>
             <span>Fecha</span>
             <span>Estado</span>
           </div>
 
-          {/*vacío*/}
-          <div className="px-6 py-20">
-            <div className="mx-auto flex max-w-sm flex-col items-center text-center">
-              {/* Icono*/}
-              <div className="mb-5">
-                <svg
-                  className="h-10 w-10 text-brand/100"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 3v5h5" />
-                  <path d="M9 13h6M9 17h4" />
-                </svg>
-              </div>
+          {/* Filas de datos */}
+          <div className="divide-y divide-line bg-panel">
+            {articulos.map((art) => (
+              <div
+                key={art.id}
+                className="grid grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 sm:grid-cols-[1fr_140px_190px_100px_110px] sm:items-center sm:gap-4"
+              >
+                {/* Título */}
+                <span className="truncate text-sm font-semibold text-fg">
+                  {art.titulo}
+                </span>
 
-              {/* Textos */}
-              <p className="text-base font-semibold text-fg">
-                No hay artículos registrados
-              </p>
-              <p className="mt-2 max-w-xs text-sm text-muted">
-                Las propuestas que se reciban aparecerán en este listado.
-              </p>
-            </div>
+                {/* Autor */}
+                <span className="text-sm text-muted">{art.autor}</span>
+
+                {/* Línea Temática*/}
+                <div>
+                  <span className="inline-flex items-center rounded-sm border border-line bg-soft/40 px-2 py-1 text-[10px] font-medium text-fg">
+                    {art.linea}
+                  </span>
+                </div>
+
+                {/* Fecha */}
+                <span className="text-xs text-muted tabular-nums">
+                  {art.fecha}
+                </span>
+
+                {/* Estado */}
+                <div>
+                  <span
+                    className={`inline-flex items-center border-y border-r border-l-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border-line/50 ${art.estadoClases}`}
+                  >
+                    {art.estado}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Pie de tabla con números de paginación y articulos mostrados  */}
+          {/* Pie de tabla */}
           <div className="flex items-center justify-between bg-soft/40 px-6 py-4 text-xs text-muted">
-            <span className="tabular-nums">Mostrando 0 de 0</span>
+            <span className="tabular-nums">Mostrando 4 de 4</span>
 
             <div className="flex items-center gap-2 opacity-50">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-line bg-panel">
