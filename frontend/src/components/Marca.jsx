@@ -1,6 +1,6 @@
 export function Marca({ compacta = false }) {
-  const tamano = compacta ? 'h-11 w-11 text-sm' : 'h-16 w-16 text-xl'
-  const tamanoNombre = compacta ? 'text-base' : 'text-lg sm:text-xl'
+  const tamano = compacta ? "h-11 w-11 text-sm" : "h-16 w-16 text-xl";
+  const tamanoNombre = compacta ? "text-base" : "text-lg sm:text-xl";
 
   return (
     <div className="flex items-center gap-3">
@@ -9,9 +9,11 @@ export function Marca({ compacta = false }) {
       >
         SGC
       </div>
-      <span className={`min-w-0 font-display font-bold leading-tight ${tamanoNombre}`}>
-        Sistema de Gestión de Convocatorias y Artículos
+      <span
+        className={`min-w-0 font-display font-bold leading-tight ${tamanoNombre}`}
+      >
+        Sistema de Gestión de Conferencias
       </span>
     </div>
-  )
+  );
 }

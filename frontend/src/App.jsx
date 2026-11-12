@@ -41,6 +41,14 @@ function PaginaSoloRol({ rol }) {
   return <InicioRol rol={rol} />;
 }
 
+function PaginaArticulos() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (!["ADMIN", "COMITE"].includes(sesion.rolActivo))
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <ListadoArticulos />;
+}
+
 function PaginaRegistroArticulo() {
   const { sesion } = useAutenticacion();
   if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
@@ -70,6 +78,7 @@ function Aplicacion() {
             path="/autor/articulos/nuevo"
             element={<PaginaRegistroArticulo />}
           />
+          <Route path="/gestion/articulos" element={<PaginaArticulos />} />
           {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
             <Route
               key={rol}
