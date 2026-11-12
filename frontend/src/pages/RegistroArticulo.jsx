@@ -34,8 +34,10 @@ export function RegistroArticulo() {
   const { sesion } = useAutenticacion()
   const [contexto, establecerContexto] = useState(null)
   const [cargando, establecerCargando] = useState(true)
-  const [enviando, establecerEnviando] = useState(false)
-  const [errorSolicitud, establecerErrorSolicitud] = useState('')
+  const [estadoEnvio, establecerEstadoEnvio] = useState('inactivo')
+  const [mensajeExito, establecerMensajeExito] = useState('')
+  const [mensajeError, establecerMensajeError] = useState('')
+  const [erroresCampos, establecerErroresCampos] = useState({})
   const [articuloCreado, establecerArticuloCreado] = useState(null)
   const [siguienteId, establecerSiguienteId] = useState(1)
   const {
@@ -43,7 +45,9 @@ export function RegistroArticulo() {
     handleSubmit,
     register,
     reset,
+    setError,
     setValue,
+    clearErrors,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -88,7 +92,7 @@ export function RegistroArticulo() {
         })
       })
       .catch((errorCarga) => {
-        if (vigente) establecerErrorSolicitud(errorCarga.message)
+        if (vigente) establecerMensajeError(errorCarga.message)
       })
       .finally(() => {
         if (vigente) establecerCargando(false)
@@ -141,16 +145,42 @@ export function RegistroArticulo() {
     remove(indice)
   }
 
+  function enviarFormularioInvalido(erroresFormulario) {
+    const campos = {}
+    function recopilar(errores, ruta = '') {
+      if (!errores || typeof errores !== 'object') return
+      if (typeof errores.message === 'string') {
+        campos[ruta] = errores.message
+        return
+      }
+      for (const [clave, valor] of Object.entries(errores)) {
+        if (['ref', 'type', 'types'].includes(clave)) continue
+        recopilar(valor, ruta ? `${ruta}.${clave}` : clave)
+      }
+    }
+
+    recopilar(erroresFormulario)
+    establecerErroresCampos(campos)
+    establecerMensajeError('Revisa los campos señalados antes de enviar la propuesta.')
+    establecerMensajeExito('')
+    establecerEstadoEnvio('error')
+  }
+
   async function enviarFormulario(datos) {
-    establecerErrorSolicitud('')
-    establecerEnviando(true)
+    establecerMensajeError('')
+    establecerMensajeExito('')
+    establecerErroresCampos({})
+    clearErrors()
+    establecerEstadoEnvio('enviando')
     try {
       const creado = await registrarArticulo({
         token: sesion.tokenAcceso,
         ...datos,
       })
+      const tituloRegistrado = creado.titulo ?? datos.titulo.trim()
       establecerArticuloCreado({
         ...creado,
+        titulo: tituloRegistrado,
         convocatoria: convocatoriaSeleccionada.nombre,
         linea_tematica: {
           nombre: lineasDisponibles.find(
@@ -159,10 +189,22 @@ export function RegistroArticulo() {
         },
         fecha_limite_postulaciones: convocatoriaSeleccionada.fecha_limite_postulaciones,
       })
+      establecerMensajeExito(
+        creado.mensaje || `El artículo "${tituloRegistrado}" se registró correctamente y fue enviado.`,
+      )
+      establecerEstadoEnvio('exitoso')
     } catch (errorRegistro) {
-      establecerErrorSolicitud(errorRegistro.message)
-    } finally {
-      establecerEnviando(false)
+      const campos = errorRegistro?.erroresCampos ?? {}
+      establecerErroresCampos(campos)
+      Object.entries(campos).forEach(([campo, mensaje]) => {
+        if (campo !== 'autores') {
+          setError(campo, { type: 'servidor', message: mensaje })
+        }
+      })
+      establecerMensajeError(
+        errorRegistro?.message || 'Ocurrió un error inesperado al registrar el artículo. Inténtalo nuevamente.',
+      )
+      establecerEstadoEnvio('error')
     }
   }
 
@@ -203,8 +245,8 @@ export function RegistroArticulo() {
             <h1 id="registro-exitoso" className="mt-3 font-display text-3xl font-extrabold text-slate-950 sm:text-4xl">
               Artículo registrado
             </h1>
-            <p role="status" className="mt-3 text-slate-600">
-              Tu propuesta quedó asociada a tu cuenta y fue enviada correctamente.
+            <p role="status" aria-live="polite" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900">
+              {mensajeExito}
             </p>
             <dl className="mt-7 grid gap-4 border-y border-slate-200 py-5 sm:grid-cols-2">
               <div>
@@ -256,9 +298,9 @@ export function RegistroArticulo() {
               <p role="status" className="mt-8 rounded-2xl border border-white/80 bg-white/95 p-5 text-slate-600 shadow-xl">
                 Cargando convocatorias disponibles…
               </p>
-            ) : errorSolicitud && !contexto ? (
+            ) : mensajeError && !contexto ? (
               <p role="alert" className="alert alert-error mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900 shadow-xl">
-                {errorSolicitud}
+                {mensajeError}
               </p>
             ) : convocatoriasAbiertas.length === 0 ? (
               <section className="mt-8 rounded-2xl border border-white/80 border-l-4 border-l-slate-700 bg-white/95 p-5 shadow-xl sm:p-7">
@@ -281,7 +323,7 @@ export function RegistroArticulo() {
                 </p>
               </section>
             ) : (
-              <form noValidate onSubmit={handleSubmit(enviarFormulario)} className="mt-7 space-y-6">
+              <form noValidate onSubmit={handleSubmit(enviarFormulario, enviarFormularioInvalido)} className="mt-7 space-y-6">
                 <section aria-labelledby="datos-articulo" className="rounded-2xl border border-white/80 bg-white/95 p-5 shadow-xl backdrop-blur-sm sm:p-8">
                   <div className="flex items-center gap-4">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-md">
@@ -598,10 +640,19 @@ export function RegistroArticulo() {
                   </p>
                 </section>
 
-                {errorSolicitud && (
-                  <p role="alert" className="alert alert-error rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-                    {errorSolicitud}
-                  </p>
+                {mensajeError && (
+                  <div role="alert" aria-live="assertive" className="alert alert-error items-start rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
+                    <div className="w-full">
+                      <p className="font-bold">{mensajeError}</p>
+                      {Object.keys(erroresCampos).length > 0 && (
+                        <ul className="mt-2 list-inside list-disc space-y-1">
+                          {[...new Set(Object.values(erroresCampos))].map((mensaje) => (
+                            <li key={mensaje}>{mensaje}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 )}
                 <div className="flex flex-col-reverse gap-3 border-t border-white/80 pt-6 sm:flex-row sm:justify-end">
                   <Link
@@ -612,10 +663,10 @@ export function RegistroArticulo() {
                   </Link>
                   <button
                     type="submit"
-                    disabled={enviando || !valoresFormulario.lineaTematica || !datosAutorActualCompletos}
+                    disabled={estadoEnvio === 'enviando' || !valoresFormulario.lineaTematica || !datosAutorActualCompletos}
                     className="btn min-h-12 rounded-none border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {enviando ? 'Registrando artículo…' : 'Registrar propuesta'}
+                    {estadoEnvio === 'enviando' ? 'Registrando artículo…' : 'Registrar propuesta'}
                   </button>
                 </div>
               </form>

@@ -81,20 +81,34 @@ export async function registrarArticulo({
     return respuesta.data
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error
-    throw new Error(
-      mensajeErrorApi(
-        error.response?.data,
-        error.response
-          ? 'No se pudo registrar el artículo. Revisa los datos e inténtalo otra vez.'
-          : 'No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.',
-      ),
-      { cause: error },
-    )
+    const estadoHttp = error.response?.status
+    const datosError = error.response?.data
+    const erroresCampos = extraerErroresRegistroArticulo(datosError)
+    const mensajeApi = mensajeErrorApi(datosError, '')
+    let mensaje
+
+    if (!error.response) {
+      mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
+    } else if (estadoHttp === 401) {
+      mensaje = 'Tu sesión no es válida o ha vencido. Inicia sesión nuevamente.'
+    } else if (estadoHttp === 403) {
+      mensaje = mensajeApi || 'No tienes permisos para registrar artículos. Inicia sesión con una cuenta de autor.'
+    } else if (estadoHttp >= 500) {
+      mensaje = 'Ocurrió un error inesperado en el servidor. Inténtalo de nuevo más tarde.'
+    } else if (estadoHttp === 400 && /plazo|postulaci[oó]n|venci[oó]|comenzado/i.test(mensajeApi)) {
+      mensaje = `El periodo de postulación está cerrado o no disponible. ${mensajeApi}`
+    } else {
+      mensaje = mensajeApi || 'No se pudo registrar el artículo. Revisa los campos indicados e inténtalo de nuevo.'
+    }
+
+    const errorRegistro = new Error(mensaje, { cause: error })
+    errorRegistro.erroresCampos = erroresCampos
+    errorRegistro.estadoHttp = estadoHttp
+    throw errorRegistro
   }
 }
 
 function mensajeErrorApi(datos, predeterminado) {
-  if (typeof datos?.detail === 'string') return datos.detail
   const mensajes = []
   function recopilar(valor) {
     if (typeof valor === 'string') mensajes.push(valor)
@@ -103,6 +117,60 @@ function mensajeErrorApi(datos, predeterminado) {
   }
   recopilar(datos)
   return mensajes.join(' ') || predeterminado
+}
+
+function extraerErroresRegistroArticulo(datos) {
+  const errores = {}
+  const traduccionCampos = {
+    titulo: 'titulo',
+    resumen: 'resumen',
+    palabras_clave: 'palabrasClave',
+    id_conferencia: 'convocatoriaId',
+    convocatoria: 'convocatoriaId',
+    id_linea: 'lineaTematica',
+    linea_tematica: 'lineaTematica',
+    responsable: 'responsableClave',
+    responsableClave: 'responsableClave',
+  }
+
+  function mensajesDe(valor) {
+    if (typeof valor === 'string') return [valor]
+    if (Array.isArray(valor)) return valor.flatMap(mensajesDe)
+    if (valor && typeof valor === 'object' && typeof valor.message === 'string') {
+      return [valor.message]
+    }
+    return []
+  }
+
+  function agregar(clave, valor) {
+    const mensajes = mensajesDe(valor)
+    if (mensajes.length) {
+      errores[clave] = [...new Set([...(errores[clave] ?? []), ...mensajes])].join(' ')
+    }
+  }
+
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return errores
+
+  for (const [campo, valor] of Object.entries(datos)) {
+    if (campo === 'coautores' && Array.isArray(valor)) {
+      valor.forEach((erroresAutor, indice) => {
+        if (!erroresAutor || typeof erroresAutor !== 'object' || Array.isArray(erroresAutor)) return
+        for (const [campoAutor, errorAutor] of Object.entries(erroresAutor)) {
+          if (['nombres', 'apellidos', 'email', 'institucion'].includes(campoAutor)) {
+            agregar(`autores.${indice + 1}.${campoAutor}`, errorAutor)
+          } else {
+            agregar('autores', errorAutor)
+          }
+        }
+      })
+      continue
+    }
+
+    const campoFormulario = traduccionCampos[campo]
+    if (campoFormulario) agregar(campoFormulario, valor)
+  }
+
+  return errores
 }
 
 export async function solicitarCodigoRecuperacion(correo) {
