@@ -7,13 +7,13 @@ export const ROLES_DISPONIBLES = {
     nombre: 'Administrador',
     descripcion: 'Gestiona usuarios y la configuración de la conferencia.',
     rutaInicio: '/admin',
-    funciones: ['Crear usuarios y asignar roles'],
+    funciones: ['Crear usuarios y asignar roles', 'Configurar fechas límite y líneas temáticas'],
   },
   COMITE: {
     nombre: 'Comité científico',
     descripcion: 'Registra usuarios y gestiona la evaluación de los artículos.',
     rutaInicio: '/comite',
-    funciones: ['Crear usuarios con los roles autorizados'],
+    funciones: ['Crear usuarios con los roles autorizados', 'Configurar fechas límite y líneas temáticas'],
   },
   AUTOR: {
     nombre: 'Autor',
