@@ -24,6 +24,84 @@ const RUTA_SOLICITAR_RECUPERACION = `${URL_API}/auth/recuperar-contrasena/`
 const RUTA_RESTABLECER_CONTRASENA = `${URL_API}/auth/restablecer-contrasena/`
 const RUTA_CONTEXTO_ARTICULOS = `${URL_API}/articulos/contexto/`
 const RUTA_REGISTRAR_ARTICULO = `${URL_API}/articulos/`
+const RUTA_CONFERENCIAS = `${URL_API}/conferencias/`
+
+function crearErrorConferencia(error, mensajePredeterminado) {
+  if (!axios.isAxiosError(error)) throw error
+  const estado = error.response?.status
+  const datos = error.response?.data
+  const detalle = mensajeErrorApi(datos, '')
+  let mensaje = detalle || mensajePredeterminado
+
+  if (!error.response) {
+    mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
+  } else if (estado === 401) {
+    mensaje = 'Tu sesión ha vencido. Inicia sesión nuevamente.'
+  } else if (estado === 403) {
+    mensaje = detalle || 'No tienes permisos para configurar conferencias.'
+  } else if (estado >= 500) {
+    mensaje = 'El servidor no pudo completar la solicitud. Inténtalo más tarde.'
+  }
+
+  const errorSolicitud = new Error(mensaje, { cause: error })
+  errorSolicitud.estadoHttp = estado
+  errorSolicitud.erroresCampos = datos && typeof datos === 'object' ? datos : {}
+  throw errorSolicitud
+}
+
+function opcionesAutenticadas(token) {
+  return { headers: { Authorization: `Bearer ${token}` } }
+}
+
+export async function obtenerConferenciasConfigurables(token) {
+  try {
+    const respuesta = await axios.get(RUTA_CONFERENCIAS, opcionesAutenticadas(token))
+    const conferencias = Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results ?? []
+    return conferencias.filter((conferencia) => conferencia.estado === 'ACTIVA')
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudieron cargar las conferencias activas.')
+  }
+}
+
+export async function obtenerConfiguracionConferencia(idConferencia, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/`
+  try {
+    const [plazos, lineas] = await Promise.all([
+      axios.get(`${base}plazos/`, opcionesAutenticadas(token)),
+      axios.get(`${base}lineas-tematicas/`, opcionesAutenticadas(token)),
+    ])
+    return {
+      plazos: Array.isArray(plazos.data) ? plazos.data : plazos.data.results ?? [],
+      lineas: Array.isArray(lineas.data) ? lineas.data : lineas.data.results ?? [],
+    }
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo cargar la configuración de esta conferencia.')
+  }
+}
+
+export async function guardarPlazoConferencia(idConferencia, plazo, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/plazos/`
+  try {
+    const respuesta = plazo.id_plazo
+      ? await axios.patch(`${base}${plazo.id_plazo}/`, plazo, opcionesAutenticadas(token))
+      : await axios.post(base, plazo, opcionesAutenticadas(token))
+    return respuesta.data
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo guardar el plazo.')
+  }
+}
+
+export async function guardarLineaTematica(idConferencia, linea, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/lineas-tematicas/`
+  try {
+    const respuesta = linea.id_linea
+      ? await axios.patch(`${base}${linea.id_linea}/`, linea, opcionesAutenticadas(token))
+      : await axios.post(base, linea, opcionesAutenticadas(token))
+    return respuesta.data
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo guardar la línea temática.')
+  }
+}
 
 export async function obtenerContextoArticulos(token) {
   try {
@@ -81,20 +159,34 @@ export async function registrarArticulo({
     return respuesta.data
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error
-    throw new Error(
-      mensajeErrorApi(
-        error.response?.data,
-        error.response
-          ? 'No se pudo registrar el artículo. Revisa los datos e inténtalo otra vez.'
-          : 'No se pudo conectar con la API. Comprueba que el backend esté ejecutándose.',
-      ),
-      { cause: error },
-    )
+    const estadoHttp = error.response?.status
+    const datosError = error.response?.data
+    const erroresCampos = extraerErroresRegistroArticulo(datosError)
+    const mensajeApi = mensajeErrorApi(datosError, '')
+    let mensaje
+
+    if (!error.response) {
+      mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
+    } else if (estadoHttp === 401) {
+      mensaje = 'Tu sesión no es válida o ha vencido. Inicia sesión nuevamente.'
+    } else if (estadoHttp === 403) {
+      mensaje = mensajeApi || 'No tienes permisos para registrar artículos. Inicia sesión con una cuenta de autor.'
+    } else if (estadoHttp >= 500) {
+      mensaje = 'Ocurrió un error inesperado en el servidor. Inténtalo de nuevo más tarde.'
+    } else if (estadoHttp === 400 && /plazo|postulaci[oó]n|venci[oó]|comenzado/i.test(mensajeApi)) {
+      mensaje = `El periodo de postulación está cerrado o no disponible. ${mensajeApi}`
+    } else {
+      mensaje = mensajeApi || 'No se pudo registrar el artículo. Revisa los campos indicados e inténtalo de nuevo.'
+    }
+
+    const errorRegistro = new Error(mensaje, { cause: error })
+    errorRegistro.erroresCampos = erroresCampos
+    errorRegistro.estadoHttp = estadoHttp
+    throw errorRegistro
   }
 }
 
 function mensajeErrorApi(datos, predeterminado) {
-  if (typeof datos?.detail === 'string') return datos.detail
   const mensajes = []
   function recopilar(valor) {
     if (typeof valor === 'string') mensajes.push(valor)
@@ -103,6 +195,60 @@ function mensajeErrorApi(datos, predeterminado) {
   }
   recopilar(datos)
   return mensajes.join(' ') || predeterminado
+}
+
+function extraerErroresRegistroArticulo(datos) {
+  const errores = {}
+  const traduccionCampos = {
+    titulo: 'titulo',
+    resumen: 'resumen',
+    palabras_clave: 'palabrasClave',
+    id_conferencia: 'convocatoriaId',
+    convocatoria: 'convocatoriaId',
+    id_linea: 'lineaTematica',
+    linea_tematica: 'lineaTematica',
+    responsable: 'responsableClave',
+    responsableClave: 'responsableClave',
+  }
+
+  function mensajesDe(valor) {
+    if (typeof valor === 'string') return [valor]
+    if (Array.isArray(valor)) return valor.flatMap(mensajesDe)
+    if (valor && typeof valor === 'object' && typeof valor.message === 'string') {
+      return [valor.message]
+    }
+    return []
+  }
+
+  function agregar(clave, valor) {
+    const mensajes = mensajesDe(valor)
+    if (mensajes.length) {
+      errores[clave] = [...new Set([...(errores[clave] ?? []), ...mensajes])].join(' ')
+    }
+  }
+
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return errores
+
+  for (const [campo, valor] of Object.entries(datos)) {
+    if (campo === 'coautores' && Array.isArray(valor)) {
+      valor.forEach((erroresAutor, indice) => {
+        if (!erroresAutor || typeof erroresAutor !== 'object' || Array.isArray(erroresAutor)) return
+        for (const [campoAutor, errorAutor] of Object.entries(erroresAutor)) {
+          if (['nombres', 'apellidos', 'email', 'institucion'].includes(campoAutor)) {
+            agregar(`autores.${indice + 1}.${campoAutor}`, errorAutor)
+          } else {
+            agregar('autores', errorAutor)
+          }
+        }
+      })
+      continue
+    }
+
+    const campoFormulario = traduccionCampos[campo]
+    if (campoFormulario) agregar(campoFormulario, valor)
+  }
+
+  return errores
 }
 
 export async function solicitarCodigoRecuperacion(correo) {
