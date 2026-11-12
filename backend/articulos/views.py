@@ -1,12 +1,18 @@
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
+from .filtros import aplicar_filtros
 from .permissions import EsAutor
+from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
+from .serializers_consulta import ArticuloListadoSerializer
+
+MENSAJE_SIN_RESULTADOS = 'No se encontraron artículos que coincidan con la consulta.'
 
 
 class ArticuloContextoView(APIView):
@@ -58,9 +64,21 @@ class ArticuloContextoView(APIView):
 
 
 class ArticuloCrearView(APIView):
-    """POST /api/articulos/ — registra un artículo (SDGC-122)."""
+    """/api/articulos/ — GET consulta el listado (SDGC-141); POST registra un artículo (SDGC-122)."""
 
-    permission_classes = [EsAutor]
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [EsAutor()]
+
+    def get(self, request):
+        articulos = aplicar_filtros(consultar_articulos(), request.query_params)
+        resultados = ArticuloListadoSerializer(articulos, many=True).data
+        return Response({
+            'count': len(resultados),
+            'mensaje': None if resultados else MENSAJE_SIN_RESULTADOS,
+            'resultados': resultados,
+        })
 
     def post(self, request):
         serializer = ArticuloCrearSerializer(data=request.data, context={'request': request})
