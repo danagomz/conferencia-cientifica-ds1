@@ -89,6 +89,8 @@ class RegistrarArticuloTests(APITestCase):
         self.client.force_authenticate(self.autor)
         r = self.client.post(URL, self.datos, format='json')
         self.assertEqual(r.status_code, 201)
+        self.assertIn('se registró correctamente', r.data['mensaje'])
+        self.assertEqual(r.data['titulo'], self.datos['titulo'])
         art = Articulo.objects.get(pk=r.data['id_articulo'])
         self.assertEqual(art.id_usuario_registra, self.autor)
         self.assertEqual(art.estado_articulo, 'REGISTRADO')

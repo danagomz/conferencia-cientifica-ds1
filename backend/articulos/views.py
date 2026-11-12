@@ -66,4 +66,6 @@ class ArticuloCrearView(APIView):
         serializer = ArticuloCrearSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         articulo = serializer.save()
-        return Response(ArticuloCrearSerializer(articulo).data, status=status.HTTP_201_CREATED)
+        datos = ArticuloCrearSerializer(articulo).data
+        datos['mensaje'] = f'El artículo "{articulo.titulo}" se registró correctamente.'
+        return Response(datos, status=status.HTTP_201_CREATED)
