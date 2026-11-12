@@ -54,13 +54,24 @@ export function InicioRol({ rol }) {
           </Link>
         )}
 
+        {['ADMIN', 'COMITE'].includes(rol) && (
+          <Link
+            to="/configuracion-conferencia"
+            className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
+          >
+            Configurar fechas y líneas temáticas
+          </Link>
+        )}
+
         <h2 className="mt-10 font-display text-xl font-bold">Disponible para este rol</h2>
         <ul className="mt-3 max-w-prose divide-y divide-line border-y border-line">
           {informacion.funciones.map((funcion) => (
             <li key={funcion} className="flex items-center justify-between gap-4 py-3">
               <span>{funcion}</span>
               <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">
-                {rol === 'AUTOR' ? 'Disponible' : 'Próximamente'}
+                {rol === 'AUTOR' || (['ADMIN', 'COMITE'].includes(rol) && funcion === 'Configurar fechas límite y líneas temáticas')
+                  ? 'Disponible'
+                  : 'Próximamente'}
               </span>
             </li>
           ))}

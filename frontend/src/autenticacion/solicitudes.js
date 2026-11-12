@@ -24,6 +24,84 @@ const RUTA_SOLICITAR_RECUPERACION = `${URL_API}/auth/recuperar-contrasena/`
 const RUTA_RESTABLECER_CONTRASENA = `${URL_API}/auth/restablecer-contrasena/`
 const RUTA_CONTEXTO_ARTICULOS = `${URL_API}/articulos/contexto/`
 const RUTA_REGISTRAR_ARTICULO = `${URL_API}/articulos/`
+const RUTA_CONFERENCIAS = `${URL_API}/conferencias/`
+
+function crearErrorConferencia(error, mensajePredeterminado) {
+  if (!axios.isAxiosError(error)) throw error
+  const estado = error.response?.status
+  const datos = error.response?.data
+  const detalle = mensajeErrorApi(datos, '')
+  let mensaje = detalle || mensajePredeterminado
+
+  if (!error.response) {
+    mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
+  } else if (estado === 401) {
+    mensaje = 'Tu sesión ha vencido. Inicia sesión nuevamente.'
+  } else if (estado === 403) {
+    mensaje = detalle || 'No tienes permisos para configurar conferencias.'
+  } else if (estado >= 500) {
+    mensaje = 'El servidor no pudo completar la solicitud. Inténtalo más tarde.'
+  }
+
+  const errorSolicitud = new Error(mensaje, { cause: error })
+  errorSolicitud.estadoHttp = estado
+  errorSolicitud.erroresCampos = datos && typeof datos === 'object' ? datos : {}
+  throw errorSolicitud
+}
+
+function opcionesAutenticadas(token) {
+  return { headers: { Authorization: `Bearer ${token}` } }
+}
+
+export async function obtenerConferenciasConfigurables(token) {
+  try {
+    const respuesta = await axios.get(RUTA_CONFERENCIAS, opcionesAutenticadas(token))
+    const conferencias = Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.results ?? []
+    return conferencias.filter((conferencia) => conferencia.estado === 'ACTIVA')
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudieron cargar las conferencias activas.')
+  }
+}
+
+export async function obtenerConfiguracionConferencia(idConferencia, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/`
+  try {
+    const [plazos, lineas] = await Promise.all([
+      axios.get(`${base}plazos/`, opcionesAutenticadas(token)),
+      axios.get(`${base}lineas-tematicas/`, opcionesAutenticadas(token)),
+    ])
+    return {
+      plazos: Array.isArray(plazos.data) ? plazos.data : plazos.data.results ?? [],
+      lineas: Array.isArray(lineas.data) ? lineas.data : lineas.data.results ?? [],
+    }
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo cargar la configuración de esta conferencia.')
+  }
+}
+
+export async function guardarPlazoConferencia(idConferencia, plazo, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/plazos/`
+  try {
+    const respuesta = plazo.id_plazo
+      ? await axios.patch(`${base}${plazo.id_plazo}/`, plazo, opcionesAutenticadas(token))
+      : await axios.post(base, plazo, opcionesAutenticadas(token))
+    return respuesta.data
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo guardar el plazo.')
+  }
+}
+
+export async function guardarLineaTematica(idConferencia, linea, token) {
+  const base = `${RUTA_CONFERENCIAS}${idConferencia}/lineas-tematicas/`
+  try {
+    const respuesta = linea.id_linea
+      ? await axios.patch(`${base}${linea.id_linea}/`, linea, opcionesAutenticadas(token))
+      : await axios.post(base, linea, opcionesAutenticadas(token))
+    return respuesta.data
+  } catch (error) {
+    crearErrorConferencia(error, 'No se pudo guardar la línea temática.')
+  }
+}
 
 export async function obtenerContextoArticulos(token) {
   try {
