@@ -1,12 +1,12 @@
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
 from .filtros import aplicar_filtros
+from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
@@ -68,11 +68,12 @@ class ArticuloCrearView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'GET':
-            return [IsAuthenticated()]
+            return [PuedeConsultarArticulos()]
         return [EsAutor()]
 
     def get(self, request):
-        articulos = aplicar_filtros(consultar_articulos(), request.query_params)
+        visibles = articulos_permitidos(consultar_articulos(), request.user)
+        articulos = aplicar_filtros(visibles, request.query_params)
         resultados = ArticuloListadoSerializer(articulos, many=True).data
         return Response({
             'count': len(resultados),
