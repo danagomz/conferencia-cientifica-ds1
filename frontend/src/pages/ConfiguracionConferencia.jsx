@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAutenticacion } from '../autenticacion/useAutenticacion'
 import {
@@ -29,6 +29,8 @@ const campo =
   'input input-bordered mt-2 min-h-12 w-full rounded-none border-line bg-panel px-4 text-fg outline-none transition focus:border-highlight focus:ring-2 focus:ring-highlight/20'
 const etiqueta = 'text-sm font-semibold text-fg'
 const mensajeCampo = 'mt-2 text-sm font-medium text-red-700'
+const CAMPOS_PLAZO = new Set(['tipo_plazo', 'fecha_inicio', 'fecha_fin', 'descripcion', 'non_field_errors', 'detail'])
+const CAMPOS_LINEA = new Set(['nombre', 'descripcion', 'habilitada', 'non_field_errors', 'detail'])
 
 function aFechaLocal(valor) {
   if (!valor) return ''
@@ -44,6 +46,7 @@ function aFechaApi(valor) {
 
 function mensajesDeError(error) {
   const datos = error?.erroresCampos
+  if (typeof datos === 'string') return [datos]
   if (!datos || typeof datos !== 'object') return []
   const mensajes = []
   function recorrer(valor) {
@@ -59,10 +62,24 @@ function validarPlazos(plazos) {
   for (const etapa of ETAPAS) {
     const plazo = plazos.find((fila) => fila.tipo_plazo === etapa.tipo)
     if (!plazo?.fecha_inicio || !plazo?.fecha_fin) {
-      return `Completa las fechas de inicio y fin para «${etapa.nombre}».`
+      return {
+        etapa: etapa.tipo,
+        mensaje: `Completa las fechas de inicio y fin para «${etapa.nombre}».`,
+      }
     }
-    if (new Date(plazo.fecha_fin) <= new Date(plazo.fecha_inicio)) {
-      return `La fecha de fin de «${etapa.nombre}» debe ser posterior a su fecha de inicio.`
+    const inicio = new Date(plazo.fecha_inicio)
+    const fin = new Date(plazo.fecha_fin)
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+      return {
+        etapa: etapa.tipo,
+        mensaje: `Revisa el formato de las fechas de «${etapa.nombre}»; el valor ingresado no es válido.`,
+      }
+    }
+    if (fin <= inicio) {
+      return {
+        etapa: etapa.tipo,
+        mensaje: `La fecha de fin de «${etapa.nombre}» debe ser posterior a su fecha de inicio.`,
+      }
     }
   }
 
@@ -70,10 +87,59 @@ function validarPlazos(plazos) {
     const anterior = plazos.find((fila) => fila.tipo_plazo === ETAPAS[indice - 1].tipo)
     const actual = plazos.find((fila) => fila.tipo_plazo === ETAPAS[indice].tipo)
     if (new Date(actual.fecha_inicio) <= new Date(anterior.fecha_fin)) {
-      return `«${ETAPAS[indice].nombre}» debe iniciar después de que termine «${ETAPAS[indice - 1].nombre}».`
+      return {
+        etapa: actual.tipo_plazo,
+        mensaje: `«${ETAPAS[indice].nombre}» debe iniciar después de que termine «${ETAPAS[indice - 1].nombre}».`,
+      }
     }
   }
-  return ''
+  return null
+}
+
+function agruparErroresPlazos(error, tipoEtapa) {
+  const datos = error?.erroresCampos
+  const errores = {}
+  const erroresApi = datos && typeof datos === 'object' && !Array.isArray(datos) ? datos : {}
+  const mensajes = mensajesDeError(error)
+  const etapa = ETAPAS.find((item) => item.tipo === tipoEtapa)
+
+  if (etapa) {
+    const camposEtapa = {}
+    for (const [campo, valor] of Object.entries(erroresApi)) {
+      if (!CAMPOS_PLAZO.has(campo)) continue
+      const destino = ['fecha_inicio', 'fecha_fin', 'descripcion'].includes(campo)
+        ? campo
+        : 'general'
+      camposEtapa[destino] = [
+        ...new Set([...(camposEtapa[destino] ?? []), ...mensajesDeValor(valor)]),
+      ]
+    }
+    if (Object.keys(camposEtapa).length) errores[etapa.tipo] = camposEtapa
+  }
+
+  if (Object.keys(errores).length === 0 && mensajes.length) {
+    errores[tipoEtapa || 'general'] = { general: mensajes }
+  }
+  return errores
+}
+
+function agruparErroresLineas(error) {
+  const datos = error?.erroresCampos
+  const errores = {}
+  if (datos && typeof datos === 'object' && !Array.isArray(datos)) {
+    for (const [campo, valor] of Object.entries(datos)) {
+      if (CAMPOS_LINEA.has(campo)) errores[campo] = mensajesDeValor(valor)
+    }
+  }
+  if (Object.keys(errores).length === 0) errores.general = mensajesDeError(error)
+  return errores
+}
+
+function mensajesDeValor(valor) {
+  if (typeof valor === 'string') return [valor]
+  if (Array.isArray(valor)) return valor.flatMap(mensajesDeValor)
+  if (valor && typeof valor === 'object') return Object.values(valor).flatMap(mensajesDeValor)
+  return []
 }
 
 function plazosIniciales(plazos) {
@@ -101,11 +167,11 @@ export function ConfiguracionConferencia() {
   const [idConfiguracionCargada, establecerIdConfiguracionCargada] = useState('')
   const [guardandoPlazos, establecerGuardandoPlazos] = useState(false)
   const [guardandoLinea, establecerGuardandoLinea] = useState(false)
-  const [error, establecerError] = useState('')
-  const [erroresBackend, establecerErroresBackend] = useState([])
-  const [exito, establecerExito] = useState('')
-  const [errorCronologia, establecerErrorCronologia] = useState('')
-  const [errorLinea, establecerErrorLinea] = useState('')
+  const [mensajeError, establecerMensajeError] = useState('')
+  const [mensajeExito, establecerMensajeExito] = useState('')
+  const [erroresPlazos, establecerErroresPlazos] = useState({})
+  const [erroresLineas, establecerErroresLineas] = useState({})
+  const alertaRef = useRef(null)
 
   const conferenciaSeleccionada = useMemo(
     () => conferencias.find((conferencia) => String(conferencia.id_conferencia) === idSeleccionado),
@@ -113,6 +179,13 @@ export function ConfiguracionConferencia() {
   )
   const cargandoConfiguracion = Boolean(idSeleccionado)
     && idConfiguracionCargada !== idSeleccionado
+  const cargando = cargandoConferencias || cargandoConfiguracion
+
+  useEffect(() => {
+    if (!mensajeError || !alertaRef.current) return
+    alertaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    alertaRef.current.focus({ preventScroll: true })
+  }, [mensajeError])
 
   useEffect(() => {
     let vigente = true
@@ -123,7 +196,7 @@ export function ConfiguracionConferencia() {
         establecerIdSeleccionado(String(datos[0]?.id_conferencia ?? ''))
       })
       .catch((errorCarga) => {
-        if (vigente) establecerError(errorCarga.message)
+        if (vigente) establecerMensajeError(errorCarga.message)
       })
       .finally(() => {
         if (vigente) establecerCargandoConferencias(false)
@@ -143,7 +216,7 @@ export function ConfiguracionConferencia() {
         establecerLineas(datos.lineas)
       })
       .catch((errorCarga) => {
-        if (vigente) establecerError(errorCarga.message)
+        if (vigente) establecerMensajeError(errorCarga.message)
       })
       .finally(() => {
         if (vigente) establecerIdConfiguracionCargada(idSeleccionado)
@@ -157,17 +230,19 @@ export function ConfiguracionConferencia() {
     establecerPlazos((actuales) => actuales.map((plazo, indicePlazo) => (
       indicePlazo === indice ? { ...plazo, [campoPlazo]: valor } : plazo
     )))
-    establecerErrorCronologia('')
-    establecerError('')
-    establecerExito('')
+    establecerErroresPlazos({})
+    establecerMensajeError('')
+    establecerMensajeExito('')
   }
 
   function cambiarConferencia(id) {
     establecerPlazos(plazosIniciales([]))
     establecerLineas([])
     establecerIdConfiguracionCargada('')
-    establecerError('')
-    establecerExito('')
+    establecerMensajeError('')
+    establecerMensajeExito('')
+    establecerErroresPlazos({})
+    establecerErroresLineas({})
     establecerIdSeleccionado(id)
   }
 
@@ -175,21 +250,25 @@ export function ConfiguracionConferencia() {
     evento.preventDefault()
     const errorValidacion = validarPlazos(plazos)
     if (errorValidacion) {
-      establecerErrorCronologia(errorValidacion)
-      establecerError('')
-      establecerExito('')
+      establecerErroresPlazos({
+        [errorValidacion.etapa]: { general: [errorValidacion.mensaje] },
+      })
+      establecerMensajeError(errorValidacion.mensaje)
+      establecerMensajeExito('')
       return
     }
 
     establecerGuardandoPlazos(true)
-    establecerError('')
-    establecerErroresBackend([])
-    establecerErrorCronologia('')
-    establecerExito('')
+    establecerMensajeError('')
+    establecerMensajeExito('')
+    establecerErroresPlazos({})
+    establecerErroresLineas({})
+    let tipoEtapaEnCurso = ''
     try {
       const actualizados = [...plazos]
       for (let indice = 0; indice < ETAPAS.length; indice += 1) {
         const plazo = actualizados[indice]
+        tipoEtapaEnCurso = plazo.tipo_plazo
         const guardado = await guardarPlazoConferencia(idSeleccionado, {
           ...(plazo.id_plazo ? { id_plazo: plazo.id_plazo } : {}),
           tipo_plazo: plazo.tipo_plazo,
@@ -204,10 +283,10 @@ export function ConfiguracionConferencia() {
         }
         establecerPlazos([...actualizados])
       }
-      establecerExito('Los cinco plazos de la conferencia se guardaron correctamente.')
+      establecerMensajeExito('Los cinco plazos de la conferencia se guardaron correctamente.')
     } catch (errorGuardado) {
-      establecerError(errorGuardado.message)
-      establecerErroresBackend(mensajesDeError(errorGuardado))
+      establecerMensajeError(errorGuardado.message)
+      establecerErroresPlazos(agruparErroresPlazos(errorGuardado, tipoEtapaEnCurso))
     } finally {
       establecerGuardandoPlazos(false)
     }
@@ -216,27 +295,31 @@ export function ConfiguracionConferencia() {
   function iniciarEdicion(linea) {
     establecerLineaEnEdicion(linea.id_linea)
     establecerBorradorLinea({ nombre: linea.nombre, descripcion: linea.descripcion ?? '' })
-    establecerErrorLinea('')
-    establecerExito('')
+    establecerErroresLineas({})
+    establecerMensajeError('')
+    establecerMensajeExito('')
   }
 
   function cancelarEdicion() {
     establecerLineaEnEdicion(null)
     establecerBorradorLinea({ nombre: '', descripcion: '' })
-    establecerErrorLinea('')
+    establecerErroresLineas({})
   }
 
   async function guardarLinea(evento) {
     evento.preventDefault()
     if (!borradorLinea.nombre.trim()) {
-      establecerErrorLinea('El nombre de la línea temática es obligatorio.')
+      const mensaje = 'El nombre de la línea temática es obligatorio.'
+      establecerErroresLineas({ nombre: [mensaje] })
+      establecerMensajeError(mensaje)
+      establecerMensajeExito('')
       return
     }
     establecerGuardandoLinea(true)
-    establecerErrorLinea('')
-    establecerError('')
-    establecerErroresBackend([])
-    establecerExito('')
+    establecerErroresLineas({})
+    establecerMensajeError('')
+    establecerMensajeExito('')
+    establecerErroresPlazos({})
     try {
       const linea = await guardarLineaTematica(idSeleccionado, {
         ...(lineaEnEdicion ? { id_linea: lineaEnEdicion } : {}),
@@ -250,10 +333,10 @@ export function ConfiguracionConferencia() {
           : [...actuales, linea].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
       ))
       cancelarEdicion()
-      establecerExito(`La línea temática «${linea.nombre}» se guardó correctamente.`)
+      establecerMensajeExito(`La línea temática «${linea.nombre}» se guardó correctamente.`)
     } catch (errorGuardado) {
-      establecerErrorLinea(errorGuardado.message)
-      establecerErroresBackend(mensajesDeError(errorGuardado))
+      establecerMensajeError(errorGuardado.message)
+      establecerErroresLineas(agruparErroresLineas(errorGuardado))
     } finally {
       establecerGuardandoLinea(false)
     }
@@ -261,8 +344,10 @@ export function ConfiguracionConferencia() {
 
   async function cambiarEstadoLinea(linea) {
     establecerGuardandoLinea(true)
-    establecerError('')
-    establecerExito('')
+    establecerMensajeError('')
+    establecerMensajeExito('')
+    establecerErroresLineas({})
+    establecerErroresPlazos({})
     try {
       const actualizada = await guardarLineaTematica(idSeleccionado, {
         id_linea: linea.id_linea,
@@ -271,10 +356,10 @@ export function ConfiguracionConferencia() {
       establecerLineas((actuales) => actuales.map((actual) => (
         actual.id_linea === actualizada.id_linea ? actualizada : actual
       )))
-      establecerExito(`La línea temática «${linea.nombre}» se ${actualizada.habilitada ? 'habilitó' : 'desactivó'} correctamente.`)
+      establecerMensajeExito(`La línea temática «${linea.nombre}» se ${actualizada.habilitada ? 'habilitó' : 'desactivó'} correctamente.`)
     } catch (errorGuardado) {
-      establecerError(errorGuardado.message)
-      establecerErroresBackend(mensajesDeError(errorGuardado))
+      establecerMensajeError(errorGuardado.message)
+      establecerErroresLineas(agruparErroresLineas(errorGuardado))
     } finally {
       establecerGuardandoLinea(false)
     }
@@ -303,22 +388,39 @@ export function ConfiguracionConferencia() {
           Administra los periodos del proceso científico y las líneas temáticas de cada conferencia activa.
         </p>
 
-        {error && (
-          <div role="alert" className="alert alert-error mt-6 rounded-none border border-red-200 bg-red-50 text-red-900">
-            <div>
-              <p className="font-bold">{error}</p>
-              {erroresBackend.length > 0 && (
-                <ul className="mt-2 list-inside list-disc">
-                  {erroresBackend.map((mensaje, indice) => <li key={`${indice}-${mensaje}`}>{mensaje}</li>)}
-                </ul>
-              )}
+        {mensajeError && (
+          <div
+            ref={alertaRef}
+            tabIndex={-1}
+            role="alert"
+            aria-live="assertive"
+            className="alert alert-error mt-6 items-start rounded-none border border-red-200 bg-red-50 text-red-900 focus:outline-2 focus:outline-red-700"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-bold">{mensajeError}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => establecerMensajeError('')}
+              aria-label="Cerrar mensaje de error"
+              className="btn btn-ghost btn-sm rounded-none text-xl text-red-900"
+            >
+              ×
+            </button>
           </div>
         )}
-        {exito && (
-          <p role="status" aria-live="polite" className="alert alert-success mt-6 rounded-none border border-emerald-200 bg-emerald-50 text-emerald-900">
-            {exito}
-          </p>
+        {mensajeExito && (
+          <div role="status" aria-live="polite" className="alert alert-success mt-6 items-start rounded-none border border-emerald-200 bg-emerald-50 text-emerald-900">
+            <p className="min-w-0 flex-1">{mensajeExito}</p>
+            <button
+              type="button"
+              onClick={() => establecerMensajeExito('')}
+              aria-label="Cerrar mensaje de éxito"
+              className="btn btn-ghost btn-sm rounded-none text-xl text-emerald-900"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         {cargandoConferencias ? (
@@ -336,6 +438,7 @@ export function ConfiguracionConferencia() {
                 id="conferencia-configuracion"
                 value={idSeleccionado}
                 onChange={(evento) => cambiarConferencia(evento.target.value)}
+                disabled={cargando || guardandoPlazos || guardandoLinea}
                 className="select select-bordered mt-2 min-h-12 w-full rounded-none border-line bg-page sm:max-w-2xl"
               >
                 {conferencias.map((conferencia) => (
@@ -378,8 +481,13 @@ export function ConfiguracionConferencia() {
                                 type="datetime-local"
                                 value={plazo.fecha_inicio}
                                 onChange={(evento) => actualizarPlazo(indice, 'fecha_inicio', evento.target.value)}
+                                disabled={guardandoPlazos}
+                                aria-invalid={Boolean(erroresPlazos[etapa.tipo]?.fecha_inicio?.length)}
                                 className={campo}
                               />
+                              {erroresPlazos[etapa.tipo]?.fecha_inicio?.map((mensaje) => (
+                                <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                              ))}
                             </div>
                             <div>
                               <label htmlFor={`${etapa.tipo}-fin`} className={etiqueta}>Fin</label>
@@ -388,8 +496,13 @@ export function ConfiguracionConferencia() {
                                 type="datetime-local"
                                 value={plazo.fecha_fin}
                                 onChange={(evento) => actualizarPlazo(indice, 'fecha_fin', evento.target.value)}
+                                disabled={guardandoPlazos}
+                                aria-invalid={Boolean(erroresPlazos[etapa.tipo]?.fecha_fin?.length)}
                                 className={campo}
                               />
+                              {erroresPlazos[etapa.tipo]?.fecha_fin?.map((mensaje) => (
+                                <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                              ))}
                             </div>
                             <div className="sm:col-span-2">
                               <label htmlFor={`${etapa.tipo}-descripcion`} className={etiqueta}>Descripción <span className="font-normal text-muted">(opcional)</span></label>
@@ -398,20 +511,31 @@ export function ConfiguracionConferencia() {
                                 rows={2}
                                 value={plazo.descripcion}
                                 onChange={(evento) => actualizarPlazo(indice, 'descripcion', evento.target.value)}
+                                disabled={guardandoPlazos}
                                 placeholder="Indicaciones para esta etapa"
                                 className="textarea textarea-bordered mt-2 w-full rounded-none border-line bg-panel text-fg"
                               />
+                              {erroresPlazos[etapa.tipo]?.descripcion?.map((mensaje) => (
+                                <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                              ))}
                             </div>
                           </div>
+                          {erroresPlazos[etapa.tipo]?.general?.length > 0 && (
+                            <ul role="alert" className="mt-4 space-y-1 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-900">
+                              {erroresPlazos[etapa.tipo].general.map((mensaje, indiceError) => (
+                                <li key={`${indiceError}-${mensaje}`}>{mensaje}</li>
+                              ))}
+                            </ul>
+                          )}
                         </fieldset>
                       )
                     })}
 
-                    {errorCronologia && (
-                      <p role="alert" className="border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950">
-                        {errorCronologia}
+                    {erroresPlazos.general?.map((mensaje) => (
+                      <p key={mensaje} role="alert" className="border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">
+                        {mensaje}
                       </p>
-                    )}
+                    ))}
                     <button
                       type="submit"
                       disabled={guardandoPlazos}
@@ -437,11 +561,25 @@ export function ConfiguracionConferencia() {
                         type="text"
                         maxLength={150}
                         value={borradorLinea.nombre}
-                        onChange={(evento) => establecerBorradorLinea((actual) => ({ ...actual, nombre: evento.target.value }))}
+                        onChange={(evento) => {
+                          establecerBorradorLinea((actual) => ({ ...actual, nombre: evento.target.value }))
+                          establecerErroresLineas((actuales) => ({ ...actuales, nombre: [] }))
+                          establecerMensajeError('')
+                        }}
+                        onFocus={() => {
+                          if (!lineaEnEdicion) {
+                            establecerMensajeExito('')
+                            establecerMensajeError('')
+                            establecerErroresLineas({})
+                          }
+                        }}
                         placeholder="Ej. Inteligencia artificial"
+                        aria-invalid={Boolean(erroresLineas.nombre?.length)}
                         className={campo}
-                        required
                       />
+                      {erroresLineas.nombre?.map((mensaje) => (
+                        <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                      ))}
                     </div>
                     <div>
                       <label htmlFor="descripcion-linea" className={etiqueta}>Descripción <span className="font-normal text-muted">(opcional)</span></label>
@@ -449,12 +587,22 @@ export function ConfiguracionConferencia() {
                         id="descripcion-linea"
                         rows={3}
                         value={borradorLinea.descripcion}
-                        onChange={(evento) => establecerBorradorLinea((actual) => ({ ...actual, descripcion: evento.target.value }))}
+                        onChange={(evento) => {
+                          establecerBorradorLinea((actual) => ({ ...actual, descripcion: evento.target.value }))
+                          establecerErroresLineas((actuales) => ({ ...actuales, descripcion: [] }))
+                          establecerMensajeError('')
+                        }}
                         placeholder="Describe brevemente el alcance de esta línea"
+                        aria-invalid={Boolean(erroresLineas.descripcion?.length)}
                         className="textarea textarea-bordered mt-2 w-full rounded-none border-line bg-page text-fg"
                       />
+                      {erroresLineas.descripcion?.map((mensaje) => (
+                        <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                      ))}
                     </div>
-                    {errorLinea && <p role="alert" className={mensajeCampo}>{errorLinea}</p>}
+                    {erroresLineas.habilitada?.concat(erroresLineas.general ?? []).map((mensaje) => (
+                      <p key={mensaje} className={mensajeCampo}>{mensaje}</p>
+                    ))}
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         type="submit"
