@@ -27,6 +27,7 @@ USUARIOS = [
     ('admin@pruebas.co', 'Admin', 'Pruebas', ADMIN),
     ('comite@pruebas.co', 'Comité', 'Pruebas', COMITE),
     ('autor@pruebas.co', 'Autor', 'Pruebas', AUTOR),
+    ('multirol@pruebas.co', 'Multirol', 'Pruebas', (ADMIN, AUTOR)),
 ]
 
 
@@ -65,7 +66,7 @@ class Command(BaseCommand):
                 usuario.set_password(clave)
                 usuario.save()
             PerfilUsuario.objects.get_or_create(usuario=usuario, defaults={'institucion': 'Univalle'})
-            asignar_roles(usuario, [rol])
+            asignar_roles(usuario, [rol] if isinstance(rol, str) else list(rol))
 
         ahora = timezone.now()
         hoy = date.today()

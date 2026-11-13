@@ -24,6 +24,12 @@ class PrepararEntornoDePruebasTests(TestCase):
             self.assertEqual(nombres_de_roles(usuario), {rol})
             self.assertTrue(usuario.check_password('Prueba#12345'))
 
+    def test_usuario_multirol_tiene_administrador_y_autor(self):
+        preparar()
+        usuario = User.objects.get(username='multirol@pruebas.co')
+        self.assertEqual(nombres_de_roles(usuario), {'ADMIN', 'AUTOR'})
+        self.assertTrue(usuario.check_password('Prueba#12345'))
+
     def test_crea_conferencia_lineas_y_plazo_vigente(self):
         preparar()
         conferencia = Conferencia.objects.get(nombre='Congreso de Pruebas')
@@ -35,7 +41,7 @@ class PrepararEntornoDePruebasTests(TestCase):
     def test_se_puede_ejecutar_varias_veces_sin_duplicar(self):
         preparar()
         preparar()
-        self.assertEqual(User.objects.count(), 3)
+        self.assertEqual(User.objects.count(), 4)
         self.assertEqual(Conferencia.objects.count(), 2)
         self.assertEqual(LineaTematica.objects.count(), 7)
         self.assertEqual(Plazo.objects.count(), 6)
