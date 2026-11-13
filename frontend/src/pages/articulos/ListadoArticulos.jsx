@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Marca } from "../../components/Marca";
 import { infoEstado } from "../../articulos/estados";
-import { listarArticulos } from "../../articulos/solicitudes";
+import {
+  listarArticulos,
+  obtenerCriteriosFiltrado,
+} from "../../articulos/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
 
@@ -99,11 +102,15 @@ function ListadoArticulos() {
   const [intento, setIntento] = useState(0);
   const [lineaSeleccionada, setLineaSeleccionada] = useState("");
   const [estadoSeleccionado, setEstadoSeleccionado] = useState("");
+  const [criterios, setCriterios] = useState({ lineas: [], estados: [] });
 
   useEffect(() => {
     let activo = true;
 
-    listarArticulos(sesion?.tokenAcceso)
+    listarArticulos(sesion?.tokenAcceso, {
+      idLinea: lineaSeleccionada,
+      estado: estadoSeleccionado,
+    })
       .then((datos) => {
         if (activo) setArticulos(datos);
       })
@@ -123,7 +130,23 @@ function ListadoArticulos() {
     return () => {
       activo = false;
     };
-  }, [intento, sesion?.tokenAcceso]);
+  }, [intento, sesion?.tokenAcceso, lineaSeleccionada, estadoSeleccionado]);
+
+  useEffect(() => {
+    let activo = true;
+
+    obtenerCriteriosFiltrado(sesion?.tokenAcceso)
+      .then((datos) => {
+        if (activo) setCriterios(datos);
+      })
+      .catch(() => {
+        // Si falla, el listado sigue funcionando y los filtros quedan en "todos".
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [sesion?.tokenAcceso]);
 
   function reintentar() {
     setError("");
@@ -131,22 +154,7 @@ function ListadoArticulos() {
     setIntento((n) => n + 1);
   }
 
-  const lineasDisponibles = [
-    ...new Set(articulos.map((articulo) => articulo.linea)),
-  ].sort((a, b) => a.localeCompare(b, "es"));
-
-  const estadosDisponibles = [
-    ...new Set(articulos.map((articulo) => articulo.estado)),
-  ];
-
-  const articulosFiltrados = articulos.filter(
-    (articulo) =>
-      (!lineaSeleccionada || articulo.linea === lineaSeleccionada) &&
-      (!estadoSeleccionado || articulo.estado === estadoSeleccionado),
-  );
-
   const total = articulos.length;
-  const totalFiltrado = articulosFiltrados.length;
   const hayFiltrosActivos = Boolean(lineaSeleccionada || estadoSeleccionado);
 
   function limpiarFiltros() {
@@ -253,9 +261,9 @@ function ListadoArticulos() {
                 className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
               >
                 <option value="">Todas las líneas</option>
-                {lineasDisponibles.map((linea) => (
-                  <option key={linea} value={linea}>
-                    {linea}
+                {criterios.lineas.map((l) => (
+                  <option key={l.valor} value={l.valor}>
+                    {l.etiqueta}
                   </option>
                 ))}
               </select>
@@ -277,11 +285,11 @@ function ListadoArticulos() {
                 className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
               >
                 <option value="">Todos los estados</option>
-                {estadosDisponibles.map((estado) => (
-                  <option key={estado} value={estado}>
-                    {infoEstado(estado).etiqueta}
+                {criterios.estados.map((e) => (
+                  <option key={e.valor} value={e.valor}>
+                    {infoEstado(e.valor).etiqueta}
                   </option>
-                ))}
+                ))}{" "}
               </select>
             </div>
 
@@ -323,13 +331,13 @@ function ListadoArticulos() {
                 Reintentar
               </button>
             </div>
-          ) : total === 0 ? (
+          ) : total === 0 && !hayFiltrosActivos ? (
             <EstadoVacio />
-          ) : totalFiltrado === 0 ? (
+          ) : total === 0 ? (
             <EstadoSinCoincidencias alLimpiar={limpiarFiltros} />
           ) : (
             <div className="divide-y divide-line bg-panel">
-              {articulosFiltrados.map((art) => {
+              {articulos.map((art) => {
                 const estado = infoEstado(art.estado);
                 const nombres = art.autores.map((a) => a.nombre);
                 const autores =
@@ -370,7 +378,7 @@ function ListadoArticulos() {
 
                     <div>
                       <span
-                        className={`inline-flex items-center border-y border-r border-l-6 border-line/100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
+                        className={`inline-flex items-center border-y border-r border-l-6 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
                       >
                         {estado.etiqueta}
                       </span>
@@ -388,7 +396,7 @@ function ListadoArticulos() {
                 ? "Cargando artículos…"
                 : error
                   ? "No fue posible consultar los artículos."
-                  : `Mostrando ${totalFiltrado} de ${total} artículos`}
+                  : `Mostrando ${total} artículos`}
             </span>
           </div>
         </section>
