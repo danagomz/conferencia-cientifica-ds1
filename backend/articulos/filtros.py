@@ -50,3 +50,44 @@ def aplicar_filtros(queryset, params):
             Q(titulo__icontains=texto) | Q(palabras_clave__icontains=texto)
         )
     return queryset
+
+
+def criterios_de_filtrado():
+    """Criterios de filtrado aprobados para el listado de artículos (HU-010, SDGC-160).
+
+    Los dos criterios aprobados son la línea temática y el estado. El filtro por
+    conferencia y la búsqueda por texto se ofrecen además, como complemento.
+    """
+    lineas = (
+        LineaTematica.objects.filter(habilitada=True)
+        .select_related('id_conferencia')
+        .order_by('id_conferencia__nombre', 'nombre')
+    )
+    return {
+        'criterios': [
+            {
+                'parametro': 'id_linea',
+                'etiqueta': 'Línea temática',
+                'opciones': [
+                    {
+                        'valor': linea.id_linea,
+                        'etiqueta': linea.nombre,
+                        'id_conferencia': linea.id_conferencia_id,
+                    }
+                    for linea in lineas
+                ],
+            },
+            {
+                'parametro': 'estado',
+                'etiqueta': 'Estado',
+                'opciones': [
+                    {'valor': estado, 'etiqueta': estado.replace('_', ' ').capitalize()}
+                    for estado in ESTADOS_ARTICULO
+                ],
+            },
+        ],
+        'adicionales': [
+            {'parametro': 'id_conferencia', 'etiqueta': 'Conferencia'},
+            {'parametro': 'q', 'etiqueta': 'Buscar por título o palabras clave'},
+        ],
+    }

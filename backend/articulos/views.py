@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
-from .filtros import aplicar_filtros
+from .filtros import aplicar_filtros, criterios_de_filtrado
 from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
@@ -88,3 +88,12 @@ class ArticuloCrearView(APIView):
         datos = ArticuloCrearSerializer(articulo).data
         datos['mensaje'] = f'El artículo "{articulo.titulo}" se registró correctamente.'
         return Response(datos, status=status.HTTP_201_CREATED)
+
+
+class ArticuloFiltrosView(APIView):
+    """GET /api/articulos/filtros/ — criterios de filtrado disponibles (SDGC-160)."""
+
+    permission_classes = [PuedeConsultarArticulos]
+
+    def get(self, request):
+        return Response(criterios_de_filtrado())
