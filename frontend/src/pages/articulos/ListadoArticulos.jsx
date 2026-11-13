@@ -389,17 +389,32 @@ function ListadoArticulos({ modo = "todos" }) {
                   nombres.length > 1
                     ? `${nombres[0]} +${nombres.length - 1}`
                     : (nombres[0] ?? "");
+
+                const correoActual = sesion?.usuario?.correo?.toLowerCase();
+                const coautores = art.autores.filter(
+                  (autor) => autor.email?.toLowerCase() !== correoActual,
+                );
+
                 return (
                   <div
                     key={art.id}
                     className={`grid grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
                   >
-                    <span
-                      title={art.titulo}
-                      className="text-sm font-semibold text-fg sm:truncate"
-                    >
-                      {art.titulo}
-                    </span>
+                    <div className="min-w-0">
+                      <span
+                        title={art.titulo}
+                        className="block text-sm font-semibold text-fg sm:truncate"
+                      >
+                        {art.titulo}
+                      </span>
+
+                      {!config.conAutor && coautores.length > 0 && (
+                        <p className="mt-1 text-xs text-muted sm:truncate">
+                          Coautores:{" "}
+                          {coautores.map((autor) => autor.nombre).join(", ")}
+                        </p>
+                      )}
+                    </div>
 
                     {config.conAutor && (
                       <span className="text-sm text-muted">
