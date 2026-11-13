@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Marca } from "../../components/Marca";
 import { infoEstado } from "../../articulos/estados";
 import { listarArticulos } from "../../articulos/solicitudes";
+import { useAutenticacion } from "../../autenticacion/useAutenticacion";
+import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
 
 const COLUMNAS = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
 
-// "2026-11-09" se lee como hora local; si no, en Colombia mostraría un día antes.
 function formatearFecha(valor) {
   const fecha = new Date(valor.length === 10 ? `${valor}T00:00:00` : valor);
   return fecha.toLocaleDateString("es-CO", {
@@ -63,28 +65,65 @@ function EstadoVacio() {
   );
 }
 
+function EstadoSinCoincidencias({ alLimpiar }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center gap-2 bg-panel px-6 py-16 text-center"
+    >
+      <p className="text-sm font-semibold text-fg">
+        No se encontraron artículos con esos filtros
+      </p>
+      <p className="max-w-xs text-xs text-muted">
+        Cambia los criterios o límpialos para volver al listado.
+      </p>
+      <button
+        type="button"
+        onClick={alLimpiar}
+        className="mt-2 border-b border-highlight pb-1 text-sm font-semibold text-highlight hover:text-brand"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+  );
+}
+
 function ListadoArticulos() {
+  const { sesion } = useAutenticacion();
+  const rutaInicioRol = sesion?.rolActivo
+    ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
+    : null;
   const [articulos, setArticulos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
+  const [lineaSeleccionada, setLineaSeleccionada] = useState("");
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState("");
 
   useEffect(() => {
     let activo = true;
-    listarArticulos()
+
+    listarArticulos(sesion?.tokenAcceso)
       .then((datos) => {
         if (activo) setArticulos(datos);
       })
-      .catch(() => {
-        if (activo) setError("No se pudo cargar el listado. Intenta de nuevo.");
+      .catch((error) => {
+        if (activo) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo cargar el listado. Intenta de nuevo.",
+          );
+        }
       })
       .finally(() => {
         if (activo) setCargando(false);
       });
+
     return () => {
       activo = false;
     };
-  }, [intento]);
+  }, [intento, sesion?.tokenAcceso]);
 
   function reintentar() {
     setError("");
@@ -92,7 +131,28 @@ function ListadoArticulos() {
     setIntento((n) => n + 1);
   }
 
+  const lineasDisponibles = [
+    ...new Set(articulos.map((articulo) => articulo.linea)),
+  ].sort((a, b) => a.localeCompare(b, "es"));
+
+  const estadosDisponibles = [
+    ...new Set(articulos.map((articulo) => articulo.estado)),
+  ];
+
+  const articulosFiltrados = articulos.filter(
+    (articulo) =>
+      (!lineaSeleccionada || articulo.linea === lineaSeleccionada) &&
+      (!estadoSeleccionado || articulo.estado === estadoSeleccionado),
+  );
+
   const total = articulos.length;
+  const totalFiltrado = articulosFiltrados.length;
+  const hayFiltrosActivos = Boolean(lineaSeleccionada || estadoSeleccionado);
+
+  function limpiarFiltros() {
+    setLineaSeleccionada("");
+    setEstadoSeleccionado("");
+  }
 
   return (
     <div className="relative min-h-screen bg-page font-sans text-fg antialiased selection:bg-brand selection:text-brand-fg">
@@ -132,7 +192,16 @@ function ListadoArticulos() {
               strokeLinejoin="round"
             />
           </svg>
-          <span className="transition-colors hover:text-fg">Gestión</span>
+          {rutaInicioRol ? (
+            <Link
+              to={rutaInicioRol}
+              className="transition-colors hover:text-fg"
+            >
+              Gestión
+            </Link>
+          ) : (
+            <span>Gestión</span>
+          )}
           <svg
             aria-hidden="true"
             viewBox="0 0 16 16"
@@ -160,7 +229,7 @@ function ListadoArticulos() {
           </h1>
           <div className="mt-3 h-1 w-12 rounded-full bg-brand" />
           <p className="mt-3 max-w-2xl text-sm text-muted">
-            Consulte las propuestas recibidas y el estado de cada artículo.
+            Consulta las propuestas recibidas y el estado de cada artículo.
           </p>
         </section>
 
@@ -168,58 +237,62 @@ function ListadoArticulos() {
         <section className="overflow-hidden bg-panel shadow-md">
           <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
 
-          {/* Filtros (solo visuales; se activan en la SDGC-156) */}
-          <div className="border-b border-line bg-soft/20 px-4 py-3">
-            <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-line/50 bg-soft/60 p-1 sm:inline-flex sm:w-auto sm:items-center">
-              <span className="inline-flex cursor-default items-center justify-center gap-2 whitespace-nowrap rounded-md border border-line/50 bg-panel px-3 py-1.5 text-xs font-semibold text-brand shadow-sm">
-                Todos
-                <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-brand-fg">
-                  {cargando ? "–" : total}
-                </span>
-              </span>
-              <span className="inline-flex cursor-default items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
-                En revisión
-              </span>
-              <span className="inline-flex cursor-default items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
-                Aceptados
-              </span>
-              <span className="inline-flex cursor-default items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-soft hover:text-fg">
-                Rechazados
-              </span>
+          {/* Filtros listado */}
+          <div className="grid gap-4 border-b border-line bg-soft/20 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
+            <div>
+              <label
+                htmlFor="filtro-linea"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+              >
+                Línea temática
+              </label>
+              <select
+                id="filtro-linea"
+                value={lineaSeleccionada}
+                onChange={(evento) => setLineaSeleccionada(evento.target.value)}
+                className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+              >
+                <option value="">Todas las líneas</option>
+                {lineasDisponibles.map((linea) => (
+                  <option key={linea} value={linea}>
+                    {linea}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          {/* Barra Buscador (solo visual) */}
-          <div className="flex flex-col gap-4 border-b border-line border-l-4 border-l-brand bg-soft/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <h2 className="text-base font-semibold text-fg">
-              Listado de artículos
-            </h2>
-
-            <div className="flex w-full sm:w-auto">
-              <span className="pointer-events-none flex w-full items-center gap-2 rounded-md border border-line bg-panel px-4 py-2 text-sm text-muted opacity-80 transition-colors hover:border-highlight/50 sm:w-64">
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="h-4 w-4"
-                >
-                  <circle
-                    cx="7"
-                    cy="7"
-                    r="4.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M10.5 10.5L13 13"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Buscar artículos...
-              </span>
+            <div>
+              <label
+                htmlFor="filtro-estado"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+              >
+                Estado
+              </label>
+              <select
+                id="filtro-estado"
+                value={estadoSeleccionado}
+                onChange={(evento) =>
+                  setEstadoSeleccionado(evento.target.value)
+                }
+                className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+              >
+                <option value="">Todos los estados</option>
+                {estadosDisponibles.map((estado) => (
+                  <option key={estado} value={estado}>
+                    {infoEstado(estado).etiqueta}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <button
+              type="button"
+              onClick={limpiarFiltros}
+              disabled={!hayFiltrosActivos}
+              className="min-h-11 border border-line px-4 text-sm font-semibold text-highlight transition hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Limpiar filtros
+            </button>
           </div>
 
           {/* Títulos columnas */}
@@ -252,11 +325,17 @@ function ListadoArticulos() {
             </div>
           ) : total === 0 ? (
             <EstadoVacio />
+          ) : totalFiltrado === 0 ? (
+            <EstadoSinCoincidencias alLimpiar={limpiarFiltros} />
           ) : (
             <div className="divide-y divide-line bg-panel">
-              {articulos.map((art) => {
+              {articulosFiltrados.map((art) => {
                 const estado = infoEstado(art.estado);
-                const autores = art.autores.map((a) => a.nombre).join(", ");
+                const nombres = art.autores.map((a) => a.nombre);
+                const autores =
+                  nombres.length > 1
+                    ? `${nombres[0]} +${nombres.length - 1}`
+                    : (nombres[0] ?? "");
                 return (
                   <div
                     key={art.id}
@@ -291,7 +370,7 @@ function ListadoArticulos() {
 
                     <div>
                       <span
-                        className={`inline-flex items-center border-y border-r border-l-2 border-line/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
+                        className={`inline-flex items-center border-y border-r border-l-6 border-line/100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
                       >
                         {estado.etiqueta}
                       </span>
@@ -302,51 +381,15 @@ function ListadoArticulos() {
             </div>
           )}
 
-          {/* Pie de tabla (paginación solo visual) */}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-soft/40 px-4 py-4 text-xs text-muted sm:px-6">
-            <span className="whitespace-nowrap tabular-nums">
-              {cargando ? (
-                "Cargando…"
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Mostrando </span>
-                  {total} de {total}
-                </>
-              )}
+          {/* Pie del listado */}
+          <div className="border-t border-line bg-soft/40 px-4 py-4 text-xs text-muted sm:px-6">
+            <span aria-live="polite">
+              {cargando
+                ? "Cargando artículos…"
+                : error
+                  ? "No fue posible consultar los artículos."
+                  : `Mostrando ${totalFiltrado} de ${total} artículos`}
             </span>
-
-            <div
-              aria-hidden="true"
-              className="flex shrink-0 items-center gap-2 opacity-50"
-            >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-line bg-panel">
-                <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
-                  <path
-                    d="M10 4L6 8l4 4"
-                    stroke="currentColor"
-                    strokeWidestuth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-
-              <span className="whitespace-nowrap px-1 font-medium text-fg">
-                1 <span className="font-normal text-muted">/</span> 1
-              </span>
-
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-line bg-panel">
-                <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
-                  <path
-                    d="M6 4l4 4-4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-            </div>
           </div>
         </section>
       </main>

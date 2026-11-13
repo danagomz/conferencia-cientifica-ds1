@@ -1,63 +1,59 @@
-// Capa de solicitudes de artículos. Por ahora devuelve datos de prueba;
-// cuando exista el endpoint de consulta, solo cambia esta función.
+import axios from "axios";
 
-const RETARDO_MS = 800; // simula la espera de la red
+const URL_API = import.meta.env.VITE_API_URL ?? "/api";
+const URL_ARTICULOS = `${URL_API}/articulos/`;
 
-const PRUEBA = [
-  {
-    id: 1,
-    titulo: "Optimización de modelos de lenguaje para el análisis de datos",
-    autores: [
-      { nombre: "María González", responsable: true },
-      { nombre: "Carlos Rodríguez", responsable: false },
-    ],
-    linea: "Sistemas Inteligentes",
-    fecha: "2026-11-09",
-    estado: "EN_REVISION",
-  },
-  {
-    id: 2,
-    titulo: "Estudio estandarizado de modelos de lenguaje",
-    autores: [{ nombre: "Ana Martínez", responsable: true }],
-    linea: "Educación en Informática",
-    fecha: "2026-11-05",
-    estado: "ACEPTADO",
-  },
-  {
-    id: 3,
-    titulo: "Arquitecturas de software: mercado laboral y usabilidad",
-    autores: [{ nombre: "Luis Pérez", responsable: true }],
-    linea: "Software en la práctica",
-    fecha: "2026-11-03",
-    estado: "REGISTRADO",
-  },
-  {
-    id: 4,
-    titulo: "Python para análisis de datos",
-    autores: [{ nombre: "Laura Gómez", responsable: true }],
-    linea: "Tecnologías en Informática",
-    fecha: "2026-10-28",
-    estado: "RECHAZADO",
-  },
-  {
-    id: 5,
-    titulo: "Frameworks de trabajo ágil",
-    autores: [{ nombre: "Sofía Ramírez", responsable: true }],
-    linea: "Sistemas de Software",
-    fecha: "2026-10-12",
-    estado: "ACEPTADO",
-  },
-  {
-    id: 6,
-    titulo: "Frameworks",
-    autores: [{ nombre: "Maria Paz", responsable: true }],
-    linea: "Sistemas de Software",
-    fecha: "2026-10-12",
-    estado: "ACEPTADO",
-  },
-];
+function mensajeErrorConsulta(error) {
+  if (!axios.isAxiosError(error)) throw error;
 
-export async function listarArticulos() {
-  await new Promise((resolver) => setTimeout(resolver, RETARDO_MS));
-  return PRUEBA;
+  const estado = error.response?.status;
+  const detalle = error.response?.data?.detail;
+  const mensajeDetalle =
+    typeof detalle === "string" && detalle.length > 0 ? detalle : "";
+
+  if (!error.response) {
+    return "No fue posible establecer conexión, compruebe su conexión a internet e intente de nuevo";
+  }
+
+  if (estado === 401) {
+    return "Su sesión caducó. Inicie sesión nuevamente";
+  }
+
+  if (estado === 403) {
+    return (
+      mensajeDetalle || "Su cuenta no tiene permiso para consultar artículos"
+    );
+  }
+
+  if (estado >= 500) {
+    return "El servidor no pudo completar la consulta. Intente de nuevo más tarde";
+  }
+
+  return mensajeDetalle || "No fue posible cargar los artículos";
+}
+
+export async function listarArticulos(token) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar artículos");
+  }
+
+  let respuesta;
+
+  try {
+    respuesta = await axios.get(URL_ARTICULOS, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    throw new Error(mensajeErrorConsulta(error), { cause: error });
+  }
+
+  const resultados = respuesta.data?.resultados;
+
+  if (!Array.isArray(resultados)) {
+    throw new Error("El servidor devolvió respuesta de artículos inválida");
+  }
+
+  return resultados;
 }
