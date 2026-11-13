@@ -370,7 +370,7 @@ function ListadoArticulos() {
 
                     <div>
                       <span
-                        className={`inline-flex items-center border-y border-r border-l-6 border-line/100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
+                        className={`inline-flex items-center border-y border-r border-l-6 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
                       >
                         {estado.etiqueta}
                       </span>
