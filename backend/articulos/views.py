@@ -11,6 +11,7 @@ from .permissions import EsAutor
 from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
 from .serializers_consulta import ArticuloListadoSerializer
+from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 
 MENSAJE_SIN_RESULTADOS = 'No se encontraron artículos que coincidan con la consulta.'
 
@@ -97,3 +98,18 @@ class ArticuloFiltrosView(APIView):
 
     def get(self, request):
         return Response(criterios_de_filtrado())
+
+class ArticulosPropiosView(APIView):
+    """GET /api/articulos/propios/ - consulta los articulos del autor autenticado."""
+
+    permission_classes = [PuedeConsultarArticulosPropios]
+
+    def get(self, request):
+        articulos = articulos_propios(request.user)
+        resultados = ArticuloListadoSerializer(articulos, many=True).data
+
+        return Response({
+            'count': len(resultados),
+            'mensaje': None if resultados else MENSAJE_SIN_RESULTADOS,
+            'resultados': resultados,
+        })
