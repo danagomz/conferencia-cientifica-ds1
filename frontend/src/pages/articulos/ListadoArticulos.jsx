@@ -92,6 +92,28 @@ function EstadoVacio() {
   );
 }
 
+function EstadoVacioAutor() {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center gap-2 bg-panel px-6 py-16 text-center"
+    >
+      <p className="text-sm font-semibold text-fg">
+        Todavía no tienes artículos registrados
+      </p>
+      <p className="max-w-xs text-xs text-muted">
+        Cuando registres una propuesta, aparecerá aquí con su estado.
+      </p>
+      <Link
+        to="/autor/articulos/nuevo"
+        className="mt-3 inline-flex min-h-11 items-center bg-brand px-5 text-sm font-semibold text-brand-fg transition hover:bg-brand-hover"
+      >
+        Registrar un artículo
+      </Link>
+    </div>
+  );
+}
+
 function EstadoSinCoincidencias({ alLimpiar }) {
   return (
     <div
@@ -377,7 +399,11 @@ function ListadoArticulos({ modo = "todos" }) {
               </button>
             </div>
           ) : total === 0 && !hayFiltrosActivos ? (
-            <EstadoVacio />
+            modo === "propios" ? (
+              <EstadoVacioAutor />
+            ) : (
+              <EstadoVacio />
+            )
           ) : total === 0 ? (
             <EstadoSinCoincidencias alLimpiar={limpiarFiltros} />
           ) : (
