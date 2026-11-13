@@ -36,9 +36,19 @@ class PrepararEntornoDePruebasTests(TestCase):
         preparar()
         preparar()
         self.assertEqual(User.objects.count(), 3)
-        self.assertEqual(Conferencia.objects.count(), 1)
-        self.assertEqual(LineaTematica.objects.count(), 4)
-        self.assertEqual(Plazo.objects.count(), 1)
+        self.assertEqual(Conferencia.objects.count(), 2)
+        self.assertEqual(LineaTematica.objects.count(), 7)
+        self.assertEqual(Plazo.objects.count(), 6)
+
+    def test_conferencia_qa_tiene_las_cinco_etapas_en_orden_y_tres_lineas(self):
+        preparar()
+        qa = Conferencia.objects.get(nombre='Conferencia de Pruebas QA')
+        self.assertEqual(LineaTematica.objects.filter(id_conferencia=qa).count(), 3)
+        plazos = list(Plazo.objects.filter(id_conferencia=qa).order_by('fecha_inicio'))
+        self.assertEqual([p.tipo_plazo for p in plazos], [t for t, _ in Plazo.TIPOS])
+        for antes, despues in zip(plazos, plazos[1:]):
+            self.assertLess(antes.fecha_fin, despues.fecha_inicio)
+        self.assertTrue(all(p.fecha_inicio < p.fecha_fin for p in plazos))
 
     def test_el_autor_creado_puede_iniciar_sesion(self):
         preparar()
@@ -51,7 +61,7 @@ class PrepararEntornoDePruebasTests(TestCase):
 
     def test_el_autor_creado_puede_registrar_un_articulo(self):
         preparar()
-        conferencia = Conferencia.objects.get()
+        conferencia = Conferencia.objects.get(nombre='Congreso de Pruebas')
         linea = LineaTematica.objects.filter(id_conferencia=conferencia).first()
         cliente = APIClient()
         cliente.force_authenticate(User.objects.get(username='autor@pruebas.co'))
