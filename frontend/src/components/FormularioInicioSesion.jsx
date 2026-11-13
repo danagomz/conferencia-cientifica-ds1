@@ -1,38 +1,44 @@
-import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { VerificacionHumana } from './VerificacionHumana'
-import { Marca } from './Marca'
-import { RecuperarContrasena } from './RecuperarContrasena'
+import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { VerificacionHumana } from "./VerificacionHumana";
+import { Marca } from "./Marca";
+import { RecuperarContrasena } from "./RecuperarContrasena";
 
-const IMAGEN_PORTADA = '/login-hero.jpg'
+const IMAGEN_PORTADA = "/login-hero.jpg";
 const claseCampo =
-  'w-full rounded-xl border-2 border-highlight bg-panel px-4 py-3 outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-highlight/30'
+  "w-full rounded-xl border-2 border-highlight bg-panel px-4 py-3 outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-highlight/30";
 
 export function FormularioInicioSesion({ alEnviar }) {
-  const [correo, establecerCorreo] = useState('')
-  const [contrasena, establecerContrasena] = useState('')
-  const [mostrarContrasena, establecerMostrarContrasena] = useState(false)
-  const [tokenCaptcha, establecerTokenCaptcha] = useState(null)
-  const [cargando, establecerCargando] = useState(false)
-  const [error, establecerError] = useState('')
-  const [recuperacionActiva, establecerRecuperacionActiva] = useState(false)
-  const referenciaCaptcha = useRef(null)
+  const [correo, establecerCorreo] = useState("");
+  const [contrasena, establecerContrasena] = useState("");
+  const [mostrarContrasena, establecerMostrarContrasena] = useState(false);
+  const [tokenCaptcha, establecerTokenCaptcha] = useState(null);
+  const [cargando, establecerCargando] = useState(false);
+  const [error, establecerError] = useState("");
+  const [recuperacionActiva, establecerRecuperacionActiva] = useState(false);
+  const referenciaCaptcha = useRef(null);
 
-  const puedeEnviar = correo.trim() !== '' && contrasena !== '' && tokenCaptcha !== null && !cargando
+  const puedeEnviar =
+    correo.trim() !== "" &&
+    contrasena !== "" &&
+    tokenCaptcha !== null &&
+    !cargando;
 
   async function enviarFormulario(evento) {
-    evento.preventDefault()
-    if (!puedeEnviar) return
+    evento.preventDefault();
+    if (!puedeEnviar) return;
 
-    establecerError('')
-    establecerCargando(true)
+    establecerError("");
+    establecerCargando(true);
     try {
-      await alEnviar({ correo, contrasena, tokenCaptcha })
+      await alEnviar({ correo, contrasena, tokenCaptcha });
     } catch (errorEnvio) {
-      establecerError(errorEnvio?.message || 'No se pudo iniciar sesión. Intenta de nuevo.')
-      referenciaCaptcha.current?.reiniciar()
+      establecerError(
+        errorEnvio?.message || "No se pudo iniciar sesión. Intenta de nuevo.",
+      );
+      referenciaCaptcha.current?.reiniciar();
     } finally {
-      establecerCargando(false)
+      establecerCargando(false);
     }
   }
 
@@ -48,10 +54,10 @@ export function FormularioInicioSesion({ alEnviar }) {
           <div className="absolute right-16 -bottom-12 h-24 w-24 rotate-12 rounded-[1.75rem] bg-highlight/80" />
           <div className="relative z-10 flex h-full max-w-[75%] flex-col justify-center">
             <span className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white/65">
-              Investigación · comunidad · ciencia
+              Investigación, comunidad y ciencia
             </span>
             <span className="mt-1 font-display text-lg font-bold leading-tight">
-              Tus ideas merecen llegar más lejos.
+              Tus ideas merecen reconocimiento.
             </span>
           </div>
         </div>
@@ -65,18 +71,22 @@ export function FormularioInicioSesion({ alEnviar }) {
           ) : (
             <>
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-highlight">
-                Portal académico
+                Portal
               </span>
               <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
                 Iniciar sesión
               </h1>
               <p className="mt-3 max-w-lg leading-relaxed text-muted">
-                Acceda a su panel de gestión académica y científica.
+                Si tiene una cuenta acceda a su panel de gestión académica y
+                científica.
               </p>
 
               <form onSubmit={enviarFormulario} className="mt-7 space-y-5">
                 <div>
-                  <label htmlFor="correo" className="mb-1.5 block text-sm font-semibold">
+                  <label
+                    htmlFor="correo"
+                    className="mb-1.5 block text-sm font-semibold"
+                  >
                     Correo electrónico
                   </label>
                   <input
@@ -86,8 +96,8 @@ export function FormularioInicioSesion({ alEnviar }) {
                     autoComplete="username"
                     value={correo}
                     onChange={(evento) => {
-                      establecerCorreo(evento.target.value)
-                      establecerError('')
+                      establecerCorreo(evento.target.value);
+                      establecerError("");
                     }}
                     placeholder="ejemplo@correo.com"
                     className={claseCampo}
@@ -96,31 +106,40 @@ export function FormularioInicioSesion({ alEnviar }) {
 
                 <div>
                   <div className="mb-1.5">
-                    <label htmlFor="contrasena" className="text-sm font-semibold">
+                    <label
+                      htmlFor="contrasena"
+                      className="text-sm font-semibold"
+                    >
                       Contraseña
                     </label>
                   </div>
                   <div className="flex gap-2">
                     <input
                       id="contrasena"
-                      type={mostrarContrasena ? 'text' : 'password'}
+                      type={mostrarContrasena ? "text" : "password"}
                       required
                       autoComplete="current-password"
                       value={contrasena}
                       onChange={(evento) => {
-                        establecerContrasena(evento.target.value)
-                        establecerError('')
+                        establecerContrasena(evento.target.value);
+                        establecerError("");
                       }}
                       placeholder="Contraseña"
                       className={claseCampo}
                     />
                     <button
                       type="button"
-                      onClick={() => establecerMostrarContrasena((visible) => !visible)}
-                      aria-label={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      onClick={() =>
+                        establecerMostrarContrasena((visible) => !visible)
+                      }
+                      aria-label={
+                        mostrarContrasena
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                       className="rounded-xl border border-line px-3 text-sm font-medium hover:bg-soft"
                     >
-                      {mostrarContrasena ? 'Ocultar' : 'Mostrar'}
+                      {mostrarContrasena ? "Ocultar" : "Mostrar"}
                     </button>
                   </div>
                   <button
@@ -139,7 +158,10 @@ export function FormularioInicioSesion({ alEnviar }) {
                 />
 
                 {error && (
-                  <p role="alert" className="rounded-xl border border-highlight bg-soft px-4 py-3 text-sm">
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-highlight bg-soft px-4 py-3 text-sm"
+                  >
                     {error}
                   </p>
                 )}
@@ -149,13 +171,16 @@ export function FormularioInicioSesion({ alEnviar }) {
                   disabled={!puedeEnviar}
                   className="w-full rounded-full bg-brand px-8 py-3.5 font-semibold text-brand-fg transition hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {cargando ? 'Ingresando…' : 'Ingresar'}
+                  {cargando ? "Ingresando…" : "Ingresar"}
                 </button>
               </form>
 
               <p className="mt-6 text-center text-sm text-muted">
-                ¿Eres nuevo?{' '}
-                <Link to="/registro-autor" className="font-semibold text-highlight underline underline-offset-4">
+                ¿Eres nuevo?{" "}
+                <Link
+                  to="/registro-autor"
+                  className="font-semibold text-highlight underline underline-offset-4"
+                >
                   Regístrate como autor
                 </Link>
               </p>
@@ -182,11 +207,12 @@ export function FormularioInicioSesion({ alEnviar }) {
               Plataforma de revisión y evaluación por pares
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-white/80">
-              Gestione convocatorias, envíe artículos científicos y consulte dictámenes del comité.
+              Gestione convocatorias, envíe sus artículos científicos y consulte
+              dictámenes del comité.
             </p>
           </div>
         </div>
       </aside>
     </div>
-  )
+  );
 }

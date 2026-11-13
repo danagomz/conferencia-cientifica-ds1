@@ -8,6 +8,7 @@ import { InicioRol } from './pages/InicioRol'
 import { RegistroArticulo } from './pages/RegistroArticulo'
 import { ConfiguracionConferencia } from './pages/ConfiguracionConferencia'
 import { SelectorRol } from './pages/SelectorRol'
+import ListadoArticulos from './pages/articulos/ListadoArticulos'
 
 function PaginaInicioSesion() {
   const { sesion, iniciarSesion } = useAutenticacion()
@@ -22,7 +23,11 @@ function RequiereSesion() {
 
 function PaginaSeleccionRol() {
   const { sesion } = useAutenticacion()
-  return sesion.roles.length > 1 ? <SelectorRol /> : <Navigate to={rutaInicial(sesion)} replace />
+  return sesion.roles.length > 1 ? (
+    <SelectorRol />
+  ) : (
+    <Navigate to={rutaInicial(sesion)} replace />
+  )
 }
 
 function PaginaSoloRol({ rol }) {
@@ -30,6 +35,15 @@ function PaginaSoloRol({ rol }) {
   if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />
   if (sesion.rolActivo !== rol) return <Navigate to={rutaInicial(sesion)} replace />
   return <InicioRol rol={rol} />
+}
+
+function PaginaArticulos() {
+  const { sesion } = useAutenticacion()
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />
+  if (!['ADMIN', 'COMITE'].includes(sesion.rolActivo)) {
+    return <Navigate to={rutaInicial(sesion)} replace />
+  }
+  return <ListadoArticulos />
 }
 
 function PaginaRegistroArticulo() {
@@ -59,11 +73,15 @@ function Aplicacion() {
       <Routes>
         <Route path="/login" element={<PaginaInicioSesion />} />
         <Route path="/registro-autor" element={<RegistroAutor />} />
+        {import.meta.env.DEV && (
+          <Route path="/vista-articulos" element={<ListadoArticulos />} />
+        )}
 
         <Route element={<RequiereSesion />}>
           <Route path={RUTA_ELEGIR_ROL} element={<PaginaSeleccionRol />} />
           <Route path="/autor/articulos/nuevo" element={<PaginaRegistroArticulo />} />
           <Route path="/configuracion-conferencia" element={<PaginaConfiguracionConferencia />} />
+          <Route path="/gestion/articulos" element={<PaginaArticulos />} />
           {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
             <Route key={rol} path={informacion.rutaInicio} element={<PaginaSoloRol rol={rol} />} />
           ))}
