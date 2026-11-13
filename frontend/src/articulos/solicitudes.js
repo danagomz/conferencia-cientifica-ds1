@@ -2,6 +2,7 @@ import axios from "axios";
 
 const URL_API = import.meta.env.VITE_API_URL ?? "/api";
 const URL_ARTICULOS = `${URL_API}/articulos/`;
+const URL_FILTROS = `${URL_ARTICULOS}filtros/`;
 
 function mensajeErrorConsulta(error) {
   if (!axios.isAxiosError(error)) throw error;
@@ -32,10 +33,14 @@ function mensajeErrorConsulta(error) {
   return mensajeDetalle || "No fue posible cargar los artículos";
 }
 
-export async function listarArticulos(token) {
+export async function listarArticulos(token, filtros = {}) {
   if (!token) {
     throw new Error("Inicie sesión para consultar artículos");
   }
+
+  const params = {};
+  if (filtros.idLinea) params.id_linea = filtros.idLinea;
+  if (filtros.estado) params.estado = filtros.estado;
 
   let respuesta;
 
@@ -44,6 +49,7 @@ export async function listarArticulos(token) {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      params,
     });
   } catch (error) {
     throw new Error(mensajeErrorConsulta(error), { cause: error });
@@ -56,4 +62,25 @@ export async function listarArticulos(token) {
   }
 
   return resultados;
+}
+
+export async function obtenerCriteriosFiltrado(token) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar artículos");
+  }
+
+  try {
+    const respuesta = await axios.get(URL_FILTROS, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const criterios = respuesta.data?.criterios;
+    if (!Array.isArray(criterios)) {
+      throw new Error("El servidor devolvió criterios de filtrado inválidos");
+    }
+    const opcionesDe = (parametro) =>
+      criterios.find((c) => c.parametro === parametro)?.opciones ?? [];
+    return { lineas: opcionesDe("id_linea"), estados: opcionesDe("estado") };
+  } catch (error) {
+    throw new Error(mensajeErrorConsulta(error), { cause: error });
+  }
 }
