@@ -18,7 +18,6 @@ export const ESTADOS = {
   },
 };
 
-// Un estado desconocido no debe romper la pantalla.
 export function infoEstado(codigo) {
   return (
     ESTADOS[codigo] ?? {

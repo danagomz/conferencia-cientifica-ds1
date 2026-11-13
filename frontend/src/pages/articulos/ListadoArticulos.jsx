@@ -5,11 +5,33 @@ import { infoEstado } from "../../articulos/estados";
 import {
   listarArticulos,
   obtenerCriteriosFiltrado,
+  listarArticulosPropios,
 } from "../../articulos/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
 
-const COLUMNAS = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
+const MODOS = {
+  todos: {
+    seccion: "Gestión",
+    etiqueta: "Comité o Administrador",
+    titulo: "Artículos postulados",
+    descripcion:
+      "Consulta las propuestas recibidas y el estado de cada artículo.",
+    conFiltros: true,
+    conAutor: true,
+  },
+  propios: {
+    seccion: "Mi espacio",
+    etiqueta: "Autor",
+    titulo: "Mis artículos",
+    descripcion: "Consulta tus propuestas y en qué etapa va cada una.",
+    conFiltros: false,
+    conAutor: false,
+  },
+};
+
+const COLUMNAS_CON_AUTOR = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
+const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_190px_110px_220px]";
 
 function formatearFecha(valor) {
   const fecha = new Date(valor.length === 10 ? `${valor}T00:00:00` : valor);
@@ -20,7 +42,7 @@ function formatearFecha(valor) {
   });
 }
 
-function FilasEsqueleto() {
+function FilasEsqueleto({ columnas, conAutor }) {
   return (
     <div role="status" className="divide-y divide-line bg-panel">
       <span className="sr-only">Cargando artículos…</span>
@@ -28,10 +50,12 @@ function FilasEsqueleto() {
         <div
           key={i}
           aria-hidden="true"
-          className={`grid grid-cols-1 gap-3 px-6 py-4 sm:items-center sm:gap-4 ${COLUMNAS}`}
+          className={`grid grid-cols-1 gap-3 px-6 py-4 sm:items-center sm:gap-4 ${columnas}`}
         >
           <div className="h-4 w-4/5 animate-pulse rounded bg-soft" />
-          <div className="h-4 w-24 animate-pulse rounded bg-soft" />
+          {conAutor && (
+            <div className="h-4 w-24 animate-pulse rounded bg-soft" />
+          )}
           <div className="h-5 w-36 animate-pulse rounded bg-soft" />
           <div className="h-4 w-20 animate-pulse rounded bg-soft" />
           <div className="h-5 w-20 animate-pulse rounded bg-soft" />
@@ -91,7 +115,9 @@ function EstadoSinCoincidencias({ alLimpiar }) {
   );
 }
 
-function ListadoArticulos() {
+function ListadoArticulos({ modo = "todos" }) {
+  const config = MODOS[modo] ?? MODOS.todos;
+  const columnas = config.conAutor ? COLUMNAS_CON_AUTOR : COLUMNAS_SIN_AUTOR;
   const { sesion } = useAutenticacion();
   const rutaInicioRol = sesion?.rolActivo
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
@@ -107,10 +133,16 @@ function ListadoArticulos() {
   useEffect(() => {
     let activo = true;
 
-    listarArticulos(sesion?.tokenAcceso, {
-      idLinea: lineaSeleccionada,
-      estado: estadoSeleccionado,
-    })
+    const solicitud =
+      modo === "propios"
+        ? listarArticulosPropios(sesion?.tokenAcceso)
+        : listarArticulos(sesion?.tokenAcceso, {
+            idLinea: lineaSeleccionada,
+            estado: estadoSeleccionado,
+          });
+
+    solicitud
+
       .then((datos) => {
         if (activo) setArticulos(datos);
       })
@@ -130,9 +162,17 @@ function ListadoArticulos() {
     return () => {
       activo = false;
     };
-  }, [intento, sesion?.tokenAcceso, lineaSeleccionada, estadoSeleccionado]);
+  }, [
+    intento,
+    sesion?.tokenAcceso,
+    lineaSeleccionada,
+    estadoSeleccionado,
+    modo,
+  ]);
 
   useEffect(() => {
+    if (!config.conFiltros) return undefined;
+
     let activo = true;
 
     obtenerCriteriosFiltrado(sesion?.tokenAcceso)
@@ -146,7 +186,7 @@ function ListadoArticulos() {
     return () => {
       activo = false;
     };
-  }, [sesion?.tokenAcceso]);
+  }, [sesion?.tokenAcceso, modo, config.conFiltros]);
 
   function reintentar() {
     setError("");
@@ -155,7 +195,8 @@ function ListadoArticulos() {
   }
 
   const total = articulos.length;
-  const hayFiltrosActivos = Boolean(lineaSeleccionada || estadoSeleccionado);
+  const hayFiltrosActivos =
+    config.conFiltros && Boolean(lineaSeleccionada || estadoSeleccionado);
 
   function limpiarFiltros() {
     setLineaSeleccionada("");
@@ -205,10 +246,10 @@ function ListadoArticulos() {
               to={rutaInicioRol}
               className="transition-colors hover:text-fg"
             >
-              Gestión
+              {config.seccion}
             </Link>
           ) : (
-            <span>Gestión</span>
+            <span>{config.seccion}</span>
           )}
           <svg
             aria-hidden="true"
@@ -230,14 +271,14 @@ function ListadoArticulos() {
         {/* Encabezado */}
         <section className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-brand">
-            Comité o Administrador
+            {config.etiqueta}
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand">
-            Artículos postulados
+            {config.titulo}
           </h1>
           <div className="mt-3 h-1 w-12 rounded-full bg-brand" />
           <p className="mt-3 max-w-2xl text-sm text-muted">
-            Consulta las propuestas recibidas y el estado de cada artículo.
+            {config.descripcion}
           </p>
         </section>
 
@@ -246,69 +287,73 @@ function ListadoArticulos() {
           <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
 
           {/* Filtros listado */}
-          <div className="grid gap-4 border-b border-line bg-soft/20 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
-            <div>
-              <label
-                htmlFor="filtro-linea"
-                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
-              >
-                Línea temática
-              </label>
-              <select
-                id="filtro-linea"
-                value={lineaSeleccionada}
-                onChange={(evento) => setLineaSeleccionada(evento.target.value)}
-                className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
-              >
-                <option value="">Todas las líneas</option>
-                {criterios.lineas.map((l) => (
-                  <option key={l.valor} value={l.valor}>
-                    {l.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {config.conFiltros && (
+            <div className="grid gap-4 border-b border-line bg-soft/20 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
+              <div>
+                <label
+                  htmlFor="filtro-linea"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+                >
+                  Línea temática
+                </label>
+                <select
+                  id="filtro-linea"
+                  value={lineaSeleccionada}
+                  onChange={(evento) =>
+                    setLineaSeleccionada(evento.target.value)
+                  }
+                  className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+                >
+                  <option value="">Todas las líneas</option>
+                  {criterios.lineas.map((l) => (
+                    <option key={l.valor} value={l.valor}>
+                      {l.etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label
-                htmlFor="filtro-estado"
-                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
-              >
-                Estado
-              </label>
-              <select
-                id="filtro-estado"
-                value={estadoSeleccionado}
-                onChange={(evento) =>
-                  setEstadoSeleccionado(evento.target.value)
-                }
-                className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
-              >
-                <option value="">Todos los estados</option>
-                {criterios.estados.map((e) => (
-                  <option key={e.valor} value={e.valor}>
-                    {infoEstado(e.valor).etiqueta}
-                  </option>
-                ))}{" "}
-              </select>
-            </div>
+              <div>
+                <label
+                  htmlFor="filtro-estado"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+                >
+                  Estado
+                </label>
+                <select
+                  id="filtro-estado"
+                  value={estadoSeleccionado}
+                  onChange={(evento) =>
+                    setEstadoSeleccionado(evento.target.value)
+                  }
+                  className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+                >
+                  <option value="">Todos los estados</option>
+                  {criterios.estados.map((e) => (
+                    <option key={e.valor} value={e.valor}>
+                      {infoEstado(e.valor).etiqueta}
+                    </option>
+                  ))}{" "}
+                </select>
+              </div>
 
-            <button
-              type="button"
-              onClick={limpiarFiltros}
-              disabled={!hayFiltrosActivos}
-              className="min-h-11 border border-line px-4 text-sm font-semibold text-highlight transition hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Limpiar filtros
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                disabled={!hayFiltrosActivos}
+                className="min-h-11 border border-line px-4 text-sm font-semibold text-highlight transition hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          )}
 
           {/* Títulos columnas */}
           <div
-            className={`hidden gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid ${COLUMNAS}`}
+            className={`hidden gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid ${columnas}`}
           >
             <span>Título</span>
-            <span>Autor</span>
+            {config.conAutor && <span>Autor</span>}
             <span>Línea Temática</span>
             <span>Fecha</span>
             <span>Estado</span>
@@ -316,7 +361,7 @@ function ListadoArticulos() {
 
           {/* Cuerpo: carga, error, vacío o filas */}
           {cargando ? (
-            <FilasEsqueleto />
+            <FilasEsqueleto columnas={columnas} conAutor={config.conAutor} />
           ) : error ? (
             <div
               role="alert"
@@ -347,7 +392,7 @@ function ListadoArticulos() {
                 return (
                   <div
                     key={art.id}
-                    className={`grid grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 sm:items-center sm:gap-4 ${COLUMNAS}`}
+                    className={`grid grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
                   >
                     <span
                       title={art.titulo}
@@ -356,12 +401,14 @@ function ListadoArticulos() {
                       {art.titulo}
                     </span>
 
-                    <span className="text-sm text-muted">
-                      <span className="font-semibold text-fg sm:hidden">
-                        Autor:{" "}
+                    {config.conAutor && (
+                      <span className="text-sm text-muted">
+                        <span className="font-semibold text-fg sm:hidden">
+                          Autor:{" "}
+                        </span>
+                        {autores}
                       </span>
-                      {autores}
-                    </span>
+                    )}
 
                     <div>
                       <span className="inline-flex items-center rounded-sm border border-line bg-soft/40 px-2 py-1 text-[10px] font-medium text-fg">

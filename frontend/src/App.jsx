@@ -51,6 +51,14 @@ function PaginaArticulos() {
   return <ListadoArticulos />;
 }
 
+function PaginaMisArticulos() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (sesion.rolActivo !== "AUTOR")
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <ListadoArticulos modo="propios" />;
+}
+
 function PaginaRegistroArticulo() {
   const { sesion } = useAutenticacion();
   if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
@@ -91,6 +99,7 @@ function Aplicacion() {
             element={<PaginaConfiguracionConferencia />}
           />
           <Route path="/gestion/articulos" element={<PaginaArticulos />} />
+          <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
           {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
             <Route
               key={rol}

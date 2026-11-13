@@ -3,6 +3,7 @@ import axios from "axios";
 const URL_API = import.meta.env.VITE_API_URL ?? "/api";
 const URL_ARTICULOS = `${URL_API}/articulos/`;
 const URL_FILTROS = `${URL_ARTICULOS}filtros/`;
+const URL_ARTICULOS_PROPIOS = `${URL_ARTICULOS}propios/`;
 
 function mensajeErrorConsulta(error) {
   if (!axios.isAxiosError(error)) throw error;
@@ -83,4 +84,30 @@ export async function obtenerCriteriosFiltrado(token) {
   } catch (error) {
     throw new Error(mensajeErrorConsulta(error), { cause: error });
   }
+}
+
+export async function listarArticulosPropios(token) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar artículos");
+  }
+
+  let respuesta;
+
+  try {
+    respuesta = await axios.get(URL_ARTICULOS_PROPIOS, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    throw new Error(mensajeErrorConsulta(error), { cause: error });
+  }
+
+  const resultados = respuesta.data?.resultados;
+
+  if (!Array.isArray(resultados)) {
+    throw new Error("El servidor devolvió respuesta de artículos inválida");
+  }
+
+  return resultados;
 }

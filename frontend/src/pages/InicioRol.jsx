@@ -51,14 +51,21 @@ export function InicioRol({ rol }) {
         <p className="mt-3 max-w-prose text-muted">{informacion.descripcion}</p>
 
         {rol === "AUTOR" && (
-          <Link
-            to="/autor/articulos/nuevo"
-            className="mt-7 inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
-          >
-            Registrar un artículo
-          </Link>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link
+              to="/autor/articulos/nuevo"
+              className="inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
+            >
+              Registrar un artículo
+            </Link>
+            <Link
+              to="/autor/articulos"
+              className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+            >
+              Mis artículos
+            </Link>
+          </div>
         )}
-
         {["ADMIN", "COMITE"].includes(rol) && (
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
