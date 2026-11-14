@@ -81,6 +81,12 @@ export function InicioRol({ rol }) {
             >
               Configurar fechas y líneas temáticas
             </Link>
+            <Link
+              to="/gestion/usuarios/nuevo"
+              className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+            >
+              Crear usuario
+            </Link>
           </div>
         )}
 
@@ -95,9 +101,10 @@ export function InicioRol({ rol }) {
             >
               <span>{funcion}</span>
               <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">
-                {rol === "AUTOR" ||
+                {                rol === "AUTOR" ||
                 (["ADMIN", "COMITE"].includes(rol) &&
-                  funcion === "Configurar fechas límite y líneas temáticas")
+                  (funcion === "Configurar fechas límite y líneas temáticas" ||
+                    funcion.startsWith("Crear usuarios")))
                   ? "Disponible"
                   : "Próximamente"}
               </span>
