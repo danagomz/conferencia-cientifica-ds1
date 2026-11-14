@@ -19,12 +19,94 @@ import axios from 'axios'
 const URL_API = import.meta.env.VITE_API_URL ?? '/api'
 
 const RUTA_INICIO_SESION = `${URL_API}/auth/login/`
+const RUTA_CREAR_USUARIO = `${URL_API}/usuarios/`
 const RUTA_REGISTRO_AUTOR = `${URL_API}/auth/registro-autor/`
 const RUTA_SOLICITAR_RECUPERACION = `${URL_API}/auth/recuperar-contrasena/`
 const RUTA_RESTABLECER_CONTRASENA = `${URL_API}/auth/restablecer-contrasena/`
 const RUTA_CONTEXTO_ARTICULOS = `${URL_API}/articulos/contexto/`
 const RUTA_REGISTRAR_ARTICULO = `${URL_API}/articulos/`
 const RUTA_CONFERENCIAS = `${URL_API}/conferencias/`
+
+export async function crearUsuario({ token, nombre, apellido, correo, institucion, contrasena, roles }) {
+  try {
+    const respuesta = await axios.post(
+      RUTA_CREAR_USUARIO,
+      {
+        first_name: nombre.trim(),
+        last_name: apellido.trim(),
+        email: correo.trim().toLowerCase(),
+        institucion: institucion.trim(),
+        password: contrasena,
+        roles,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    return respuesta.data
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error
+
+    const estado = error.response?.status
+    const datos = error.response?.data
+    const erroresCampo = extraerErroresCrearUsuario(datos)
+    let mensaje
+
+    if (!error.response) {
+      mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
+    } else if (estado === 401) {
+      mensaje = 'Tu sesión ha vencido. Inicia sesión nuevamente.'
+    } else if (estado === 403) {
+      mensaje = 'No tienes permisos para crear usuarios. Se requiere el rol de Administrador o Comité científico.'
+    } else if (estado >= 500) {
+      mensaje = 'El servidor no pudo completar la creación del usuario. Inténtalo más tarde.'
+    } else {
+      mensaje = Object.values(erroresCampo).flat().join(' ')
+        || 'No se pudo crear el usuario. Revisa los datos e inténtalo de nuevo.'
+    }
+
+    const errorSolicitud = new Error(mensaje, { cause: error })
+    errorSolicitud.erroresCampo = erroresCampo
+    errorSolicitud.estadoHttp = estado
+    throw errorSolicitud
+  }
+}
+
+function extraerErroresCrearUsuario(datos) {
+  const campos = {
+    first_name: 'nombre',
+    last_name: 'apellido',
+    email: 'correo',
+    institucion: 'institucion',
+    password: 'contrasena',
+    roles: 'roles',
+  }
+  const errores = {}
+  const generales = []
+
+  function recopilar(valor) {
+    if (typeof valor === 'string') return [valor]
+    if (Array.isArray(valor)) return valor.flatMap(recopilar)
+    if (valor && typeof valor === 'object') return Object.values(valor).flatMap(recopilar)
+    return []
+  }
+
+  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return errores
+  for (const [campo, valor] of Object.entries(datos)) {
+    const mensajes = recopilar(valor)
+    const campoFormulario = campos[campo]
+    if (campoFormulario) {
+      errores[campoFormulario] = [...new Set([...(errores[campoFormulario] ?? []), ...mensajes])]
+    } else {
+      generales.push(...mensajes)
+    }
+  }
+  if (generales.length) errores.general = [...new Set(generales)]
+  return errores
+}
 
 function crearErrorConferencia(error, mensajePredeterminado) {
   if (!axios.isAxiosError(error)) throw error

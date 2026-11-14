@@ -11,6 +11,7 @@ import { RegistroAutor } from "./pages/RegistroAutor";
 import { InicioRol } from "./pages/InicioRol";
 import { RegistroArticulo } from "./pages/RegistroArticulo";
 import { ConfiguracionConferencia } from "./pages/ConfiguracionConferencia";
+import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
 
@@ -76,6 +77,15 @@ function PaginaConfiguracionConferencia() {
   return <ConfiguracionConferencia />;
 }
 
+function PaginaCrearUsuario() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (!["ADMIN", "COMITE"].includes(sesion.rolActivo)) {
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  }
+  return <CrearUsuario />;
+}
+
 function RedireccionInicial() {
   const { sesion } = useAutenticacion();
   return <Navigate to={sesion ? rutaInicial(sesion) : "/login"} replace />;
@@ -98,6 +108,7 @@ function Aplicacion() {
             path="/configuracion-conferencia"
             element={<PaginaConfiguracionConferencia />}
           />
+          <Route path="/gestion/usuarios/nuevo" element={<PaginaCrearUsuario />} />
           <Route path="/gestion/articulos" element={<PaginaArticulos />} />
           <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
           {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
