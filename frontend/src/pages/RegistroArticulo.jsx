@@ -109,8 +109,7 @@ export function RegistroArticulo() {
   const convocatoriaSeleccionada = convocatoriasAbiertas.find(
     (convocatoria) => String(convocatoria.id) === valoresFormulario.convocatoriaId,
   )
-  const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas
-    .filter((linea) => linea.habilitada) ?? []
+  const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas ?? []
   const datosAutorActualCompletos = Boolean(
     contexto?.autor_actual?.nombres?.trim()
       && contexto?.autor_actual?.apellidos?.trim()
@@ -119,14 +118,14 @@ export function RegistroArticulo() {
   )
 
   function cambiarConvocatoria(valor) {
-    setValue('convocatoriaId', valor, { shouldValidate: true, shouldDirty: true })
+    setValue('convocatoriaId', valor, { shouldDirty: true })
     const convocatoria = convocatoriasAbiertas.find(
       (opcion) => String(opcion.id) === valor,
     )
     setValue('lineaTematica', String(convocatoria?.lineas_tematicas[0]?.id ?? ''), {
-      shouldValidate: true,
       shouldDirty: true,
     })
+    clearErrors('lineaTematica')
   }
 
   function agregarAutor() {
