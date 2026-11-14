@@ -21,6 +21,11 @@ class ContextoArticuloTests(APITestCase):
         conferencia.estado = 'ACTIVA'
         conferencia.save(update_fields=['estado'])
         linea = LineaTematica.objects.create(id_conferencia=conferencia, nombre='Inteligencia artificial')
+        LineaTematica.objects.create(
+            id_conferencia=conferencia,
+            nombre='Línea deshabilitada',
+            habilitada=False,
+        )
         ahora = timezone.now()
         Plazo.objects.create(
             id_conferencia=conferencia,
@@ -39,7 +44,11 @@ class ContextoArticuloTests(APITestCase):
         self.assertTrue(respuesta.data['convocatorias'][0]['postulaciones_abiertas'])
         self.assertEqual(
             respuesta.data['convocatorias'][0]['lineas_tematicas'],
-            [{'id': linea.id_linea, 'nombre': linea.nombre}],
+            [{
+                'id': linea.id_linea,
+                'nombre': linea.nombre,
+                'habilitada': True,
+            }],
         )
 
     def test_contexto_requiere_rol_autor(self):

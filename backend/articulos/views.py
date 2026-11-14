@@ -35,9 +35,12 @@ class ArticuloContextoView(APIView):
                 None,
             )
             lineas = [
-                {'id': linea.id_linea, 'nombre': linea.nombre}
-                for linea in conferencia.lineas_tematicas.all()
-                if linea.habilitada
+                {
+                    'id': linea.id_linea,
+                    'nombre': linea.nombre,
+                    'habilitada': linea.habilitada,
+                }
+                for linea in conferencia.lineas_tematicas.filter(habilitada=True).order_by('nombre')
             ]
             convocatorias.append({
                 'id': conferencia.id_conferencia,
