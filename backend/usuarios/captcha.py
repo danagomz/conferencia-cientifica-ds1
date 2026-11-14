@@ -5,11 +5,15 @@ from urllib.error import URLError
 from django.conf import settings
 
 URL_VERIFICACION = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+TOKEN_SIMULADO_LOCAL = 'token-de-prueba'
 
 
 def captcha_es_valido(token):
-    if not token or not settings.TURNSTILE_SECRET_KEY:
+    if not token:
         return False
+
+    if not settings.TURNSTILE_SECRET_KEY:
+        return settings.DEBUG and token == TOKEN_SIMULADO_LOCAL
 
     datos = parse.urlencode({'secret': settings.TURNSTILE_SECRET_KEY, 'response': token}).encode()
 

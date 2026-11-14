@@ -29,6 +29,15 @@ class CaptchaEsValidoTests(SimpleTestCase):
     def test_sin_clave_secreta_no_es_valido(self):
         self.assertFalse(captcha_es_valido('un-token'))
 
+    @override_settings(DEBUG=True, TURNSTILE_SECRET_KEY='')
+    def test_token_simulado_es_valido_solo_en_desarrollo_sin_clave(self):
+        self.assertTrue(captcha_es_valido('token-de-prueba'))
+        self.assertFalse(captcha_es_valido('otro-token'))
+
+    @override_settings(DEBUG=False, TURNSTILE_SECRET_KEY='')
+    def test_token_simulado_no_es_valido_fuera_de_desarrollo(self):
+        self.assertFalse(captcha_es_valido('token-de-prueba'))
+
     @patch('usuarios.captcha.request.urlopen')
     def test_cloudflare_dice_que_es_valido(self, urlopen):
         urlopen.return_value = respuesta_de_cloudflare({'success': True})
