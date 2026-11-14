@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { crearUsuario } from '../autenticacion/solicitudes'
 import { useAutenticacion } from '../autenticacion/useAutenticacion'
 import { Marca } from '../components/Marca'
+import { validarFormularioUsuario } from './validarFormularioUsuario'
 
 const FORMULARIO_INICIAL = {
   nombre: '',
@@ -44,53 +45,51 @@ export function CrearUsuario() {
   function actualizarCampo(evento) {
     const { name, value } = evento.target
     establecerFormulario((actual) => ({ ...actual, [name]: value }))
-    establecerErroresCampo((actuales) => ({ ...actuales, [name]: [] }))
+    establecerErroresCampo((actuales) => {
+      const nuevosErrores = { ...actuales }
+      delete nuevosErrores[name]
+      if (name === 'contrasena') delete nuevosErrores.confirmarContrasena
+      return nuevosErrores
+    })
     establecerMensajeError('')
     establecerMensajeExito('')
+  }
+
+  function validarCampo(campo, datos = formulario, roles = rolesSeleccionados) {
+    const errores = validarFormularioUsuario({ ...datos, roles }, rolesPermitidos)
+    establecerErroresCampo((actuales) => {
+      const nuevosErrores = { ...actuales }
+      if (errores[campo]) {
+        nuevosErrores[campo] = errores[campo]
+      } else {
+        delete nuevosErrores[campo]
+      }
+      return nuevosErrores
+    })
   }
 
   function alternarRol(codigo) {
-    establecerRolesSeleccionados((actuales) => (
-      actuales.includes(codigo)
-        ? actuales.filter((rol) => rol !== codigo)
-        : [...actuales, codigo]
-    ))
-    establecerErroresCampo((actuales) => ({ ...actuales, roles: [] }))
+    const nuevosRoles = rolesSeleccionados.includes(codigo)
+      ? rolesSeleccionados.filter((rol) => rol !== codigo)
+      : [...rolesSeleccionados, codigo]
+    establecerRolesSeleccionados(nuevosRoles)
+    establecerErroresCampo((actuales) => {
+      const nuevosErrores = { ...actuales }
+      delete nuevosErrores.roles
+      return nuevosErrores
+    })
     establecerMensajeError('')
     establecerMensajeExito('')
-  }
-
-  function validarFormulario() {
-    const errores = {}
-    if (!formulario.nombre.trim()) errores.nombre = ['Ingresa el nombre.']
-    if (!formulario.apellido.trim()) errores.apellido = ['Ingresa el apellido.']
-    if (!formulario.correo.trim()) {
-      errores.correo = ['Ingresa el correo electrónico.']
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formulario.correo.trim())) {
-      errores.correo = ['Ingresa un correo electrónico válido.']
-    }
-    if (!formulario.institucion.trim()) errores.institucion = ['Ingresa la institución o afiliación.']
-    if (formulario.contrasena.length < 8) {
-      errores.contrasena = ['La contraseña debe tener al menos 8 caracteres.']
-    } else if (/^\d+$/.test(formulario.contrasena)) {
-      errores.contrasena = ['La contraseña no puede estar formada solo por números.']
-    }
-    if (!formulario.confirmarContrasena) {
-      errores.confirmarContrasena = ['Confirma la contraseña.']
-    } else if (formulario.contrasena !== formulario.confirmarContrasena) {
-      errores.confirmarContrasena = ['Las contraseñas no coinciden.']
-    }
-    if (rolesSeleccionados.length === 0) {
-      errores.roles = ['Selecciona al menos un rol para el usuario.']
-    }
-    return errores
   }
 
   async function enviarFormulario(evento) {
     evento.preventDefault()
     establecerMensajeError('')
     establecerMensajeExito('')
-    const errores = validarFormulario()
+    const errores = validarFormularioUsuario(
+      { ...formulario, roles: rolesSeleccionados },
+      rolesPermitidos,
+    )
     establecerErroresCampo(errores)
     if (Object.keys(errores).length > 0) {
       establecerMensajeError('Revisa los campos indicados antes de crear el usuario.')
@@ -226,10 +225,12 @@ export function CrearUsuario() {
                       maxLength={150}
                       value={formulario.nombre}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('nombre')}
                       aria-invalid={Boolean(erroresCampo.nombre)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.nombre ? 'nombre-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.nombre ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.nombre && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.nombre)}</span>}
+                    {erroresCampo.nombre && <span id="nombre-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.nombre)}</span>}
                   </label>
                   <label className="block text-sm font-semibold" htmlFor="apellido-usuario">
                     Apellido <span className="text-[#5D737E]">*</span>
@@ -241,10 +242,12 @@ export function CrearUsuario() {
                       maxLength={150}
                       value={formulario.apellido}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('apellido')}
                       aria-invalid={Boolean(erroresCampo.apellido)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.apellido ? 'apellido-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.apellido ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.apellido && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.apellido)}</span>}
+                    {erroresCampo.apellido && <span id="apellido-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.apellido)}</span>}
                   </label>
                   <label className="block text-sm font-semibold sm:col-span-2" htmlFor="correo-usuario">
                     Correo electrónico / nombre de usuario <span className="text-[#5D737E]">*</span>
@@ -253,14 +256,16 @@ export function CrearUsuario() {
                       name="correo"
                       type="email"
                       autoComplete="email"
-                      maxLength={254}
+                      maxLength={150}
                       value={formulario.correo}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('correo')}
                       aria-invalid={Boolean(erroresCampo.correo)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.correo ? 'correo-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.correo ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                       placeholder="nombre@institucion.edu"
                     />
-                    {erroresCampo.correo && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.correo)}</span>}
+                    {erroresCampo.correo && <span id="correo-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.correo)}</span>}
                   </label>
                   <label className="block text-sm font-semibold sm:col-span-2" htmlFor="institucion-usuario">
                     Institución o afiliación <span className="text-[#5D737E]">*</span>
@@ -272,11 +277,13 @@ export function CrearUsuario() {
                       maxLength={150}
                       value={formulario.institucion}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('institucion')}
                       aria-invalid={Boolean(erroresCampo.institucion)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.institucion ? 'institucion-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.institucion ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                       placeholder="Universidad o centro de investigación"
                     />
-                    {erroresCampo.institucion && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.institucion)}</span>}
+                    {erroresCampo.institucion && <span id="institucion-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.institucion)}</span>}
                   </label>
                 </div>
               </section>
@@ -288,18 +295,21 @@ export function CrearUsuario() {
                 <p className="mt-1 text-sm text-[#3F4045]">Puedes asignar uno o varios roles permitidos.</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {rolesPermitidos.map((rol) => (
-                    <label key={rol.codigo} className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${rolesSeleccionados.includes(rol.codigo) ? 'border-[#5D737E] bg-[#E3E7D3]' : 'border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]'}`}>
+                    <label key={rol.codigo} className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${erroresCampo.roles ? 'border-red-700 bg-red-50' : rolesSeleccionados.includes(rol.codigo) ? 'border-[#5D737E] bg-[#E3E7D3]' : 'border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]'}`}>
                       <input
                         type="checkbox"
                         checked={rolesSeleccionados.includes(rol.codigo)}
                         onChange={() => alternarRol(rol.codigo)}
+                        onBlur={() => validarCampo('roles')}
+                        aria-invalid={Boolean(erroresCampo.roles)}
+                        aria-describedby={erroresCampo.roles ? 'roles-usuario-error' : undefined}
                         className="checkbox checkbox-primary mt-0.5 rounded-none"
                       />
                       <span className="text-sm font-semibold">{rol.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {erroresCampo.roles && <p className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.roles)}</p>}
+                {erroresCampo.roles && <p id="roles-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.roles)}</p>}
               </section>
 
               <section aria-labelledby="contrasena-usuario">
@@ -326,10 +336,12 @@ export function CrearUsuario() {
                       autoComplete="new-password"
                       value={formulario.contrasena}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('contrasena')}
                       aria-invalid={Boolean(erroresCampo.contrasena)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.contrasena ? 'contrasena-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.contrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.contrasena && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.contrasena)}</span>}
+                    {erroresCampo.contrasena && <span id="contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.contrasena)}</span>}
                   </label>
                   <label className="block text-sm font-semibold" htmlFor="confirmar-contrasena-usuario">
                     Confirmar contraseña <span className="text-[#5D737E]">*</span>
@@ -340,10 +352,12 @@ export function CrearUsuario() {
                       autoComplete="new-password"
                       value={formulario.confirmarContrasena}
                       onChange={actualizarCampo}
+                      onBlur={() => validarCampo('confirmarContrasena')}
                       aria-invalid={Boolean(erroresCampo.confirmarContrasena)}
-                      className={CLASE_CAMPO}
+                      aria-describedby={erroresCampo.confirmarContrasena ? 'confirmar-contrasena-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresCampo.confirmarContrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.confirmarContrasena && <span className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.confirmarContrasena)}</span>}
+                    {erroresCampo.confirmarContrasena && <span id="confirmar-contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.confirmarContrasena)}</span>}
                   </label>
                 </div>
               </section>
