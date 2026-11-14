@@ -106,7 +106,7 @@ function EstadoVacioAutor() {
       </p>
       <Link
         to="/autor/articulos/nuevo"
-        className="mt-3 inline-flex min-h-11 items-center bg-brand px-5 text-sm font-semibold text-brand-fg transition hover:bg-brand-hover"
+        className="mt-3 inline-flex min-h-9 items-center rounded-md bg-brand px-4 py-2 text-xs font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
       >
         Registrar un artículo
       </Link>
