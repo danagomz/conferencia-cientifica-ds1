@@ -50,9 +50,9 @@ export function SelectorRol() {
                     onChange={() => establecerElegido(rol)}
                     className="peer sr-only"
                   />
-                  <span className="block rounded-2xl border-2 border-highlight bg-panel p-4 transition hover:border-brand/60 peer-checked:border-brand peer-checked:bg-brand peer-checked:text-brand-fg peer-focus-visible:ring-4 peer-focus-visible:ring-highlight/40">
+                  <span className="block border-2 border-highlight bg-panel p-4 text-fg transition hover:border-brand/60 peer-checked:border-brand peer-checked:bg-brand peer-checked:text-brand-fg peer-focus-visible:ring-4 peer-focus-visible:ring-highlight/40">
                     <span className="block font-display text-lg font-bold">{ROLES_DISPONIBLES[rol].nombre}</span>
-                    <span className="mt-0.5 block text-sm text-muted peer-checked:text-brand-fg/80">
+                    <span className="mt-0.5 block text-sm text-current/80">
                       {ROLES_DISPONIBLES[rol].descripcion}
                     </span>
                   </span>

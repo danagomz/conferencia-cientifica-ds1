@@ -6,7 +6,7 @@ import { RecuperarContrasena } from "./RecuperarContrasena";
 
 const IMAGEN_PORTADA = "/login-hero.jpg";
 const claseCampo =
-  "w-full rounded-xl border-2 border-highlight bg-panel px-4 py-3 outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-highlight/30";
+  "w-full rounded-none border-2 border-highlight bg-panel px-4 py-3 outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-highlight/30";
 
 export function FormularioInicioSesion({ alEnviar }) {
   const [correo, establecerCorreo] = useState("");
@@ -169,7 +169,7 @@ export function FormularioInicioSesion({ alEnviar }) {
                 <button
                   type="submit"
                   disabled={!puedeEnviar}
-                  className="w-full rounded-full bg-brand px-8 py-3.5 font-semibold text-brand-fg transition hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-none bg-brand px-8 py-3.5 font-semibold text-brand-fg transition hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {cargando ? "Ingresando…" : "Ingresar"}
                 </button>

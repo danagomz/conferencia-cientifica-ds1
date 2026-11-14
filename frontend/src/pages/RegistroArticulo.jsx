@@ -109,7 +109,8 @@ export function RegistroArticulo() {
   const convocatoriaSeleccionada = convocatoriasAbiertas.find(
     (convocatoria) => String(convocatoria.id) === valoresFormulario.convocatoriaId,
   )
-  const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas ?? []
+  const lineasDisponibles = convocatoriaSeleccionada?.lineas_tematicas
+    .filter((linea) => linea.habilitada) ?? []
   const datosAutorActualCompletos = Boolean(
     contexto?.autor_actual?.nombres?.trim()
       && contexto?.autor_actual?.apellidos?.trim()
