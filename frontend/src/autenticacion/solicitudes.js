@@ -52,24 +52,27 @@ export async function crearUsuario({ token, nombre, apellido, correo, institucio
 
     const estado = error.response?.status
     const datos = error.response?.data
-    const erroresCampo = extraerErroresCrearUsuario(datos)
+    const { erroresCampo, erroresGenerales } = extraerErroresCrearUsuario(datos)
     let mensaje
 
     if (!error.response) {
       mensaje = 'No se pudo conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.'
     } else if (estado === 401) {
-      mensaje = 'Tu sesión ha vencido. Inicia sesión nuevamente.'
+      mensaje = 'Tu sesión no es válida o ha vencido. Inicia sesión con una cuenta autorizada para crear usuarios.'
     } else if (estado === 403) {
       mensaje = 'No tienes permisos para crear usuarios. Se requiere el rol de Administrador o Comité científico.'
     } else if (estado >= 500) {
       mensaje = 'El servidor no pudo completar la creación del usuario. Inténtalo más tarde.'
     } else {
-      mensaje = Object.values(erroresCampo).flat().join(' ')
-        || 'No se pudo crear el usuario. Revisa los datos e inténtalo de nuevo.'
+      mensaje = erroresGenerales.join(' ')
+        || (Object.keys(erroresCampo).length
+          ? 'El servidor rechazó algunos datos. Revisa los campos indicados.'
+          : 'No se pudo crear el usuario. Revisa los datos e inténtalo de nuevo.')
     }
 
     const errorSolicitud = new Error(mensaje, { cause: error })
     errorSolicitud.erroresCampo = erroresCampo
+    errorSolicitud.erroresGenerales = erroresGenerales
     errorSolicitud.estadoHttp = estado
     throw errorSolicitud
   }
@@ -78,34 +81,51 @@ export async function crearUsuario({ token, nombre, apellido, correo, institucio
 function extraerErroresCrearUsuario(datos) {
   const campos = {
     first_name: 'nombre',
+    nombre: 'nombre',
     last_name: 'apellido',
+    apellido: 'apellido',
     email: 'correo',
+    username: 'correo',
+    correo: 'correo',
     institucion: 'institucion',
     password: 'contrasena',
+    contrasena: 'contrasena',
     roles: 'roles',
   }
   const errores = {}
   const generales = []
 
-  function recopilar(valor) {
-    if (typeof valor === 'string') return [valor]
-    if (Array.isArray(valor)) return valor.flatMap(recopilar)
-    if (valor && typeof valor === 'object') return Object.values(valor).flatMap(recopilar)
-    return []
+  function recopilar(valor, destino = []) {
+    if (typeof valor === 'string' && valor.trim()) {
+      destino.push(valor.trim())
+    } else if (Array.isArray(valor)) {
+      valor.forEach((elemento) => recopilar(elemento, destino))
+    } else if (valor && typeof valor === 'object') {
+      Object.values(valor).forEach((elemento) => recopilar(elemento, destino))
+    }
+    return destino
   }
 
-  if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return errores
-  for (const [campo, valor] of Object.entries(datos)) {
-    const mensajes = recopilar(valor)
-    const campoFormulario = campos[campo]
-    if (campoFormulario) {
-      errores[campoFormulario] = [...new Set([...(errores[campoFormulario] ?? []), ...mensajes])]
-    } else {
-      generales.push(...mensajes)
+  if (typeof datos === 'string' || Array.isArray(datos)) {
+    generales.push(...recopilar(datos))
+  } else if (datos && typeof datos === 'object') {
+    for (const [campo, valor] of Object.entries(datos)) {
+      const mensajes = recopilar(valor)
+      const campoFormulario = campos[campo]
+      if (campoFormulario) {
+        errores[campoFormulario] = [
+          ...new Set([...(errores[campoFormulario] ?? []), ...mensajes]),
+        ]
+      } else {
+        generales.push(...mensajes)
+      }
     }
   }
-  if (generales.length) errores.general = [...new Set(generales)]
-  return errores
+
+  return {
+    erroresCampo: errores,
+    erroresGenerales: [...new Set(generales)],
+  }
 }
 
 function crearErrorConferencia(error, mensajePredeterminado) {
