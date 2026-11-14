@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { crearUsuario } from '../autenticacion/solicitudes'
 import { useAutenticacion } from '../autenticacion/useAutenticacion'
@@ -23,6 +23,15 @@ const ROLES = [
 const CLASE_CAMPO =
   'input input-bordered mt-2 min-h-12 w-full rounded-none border-[#BDC2BF] bg-[#FCFCFC] px-4 text-[#02111B] outline-none transition placeholder:text-[#777B78] focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20'
 const CLASE_ERROR = 'mt-1 block text-sm font-medium text-red-800'
+const ETIQUETAS_CAMPOS = {
+  nombre: 'Nombre',
+  apellido: 'Apellido',
+  correo: 'Correo electrónico / nombre de usuario',
+  institucion: 'Institución o afiliación',
+  contrasena: 'Contraseña',
+  confirmarContrasena: 'Confirmación de contraseña',
+  roles: 'Roles asignados',
+}
 
 function mostrarMensajes(mensajes) {
   return Array.isArray(mensajes) ? mensajes.join(' ') : mensajes
@@ -33,14 +42,25 @@ export function CrearUsuario() {
   const [formulario, establecerFormulario] = useState(FORMULARIO_INICIAL)
   const [rolesSeleccionados, establecerRolesSeleccionados] = useState([])
   const [erroresCampo, establecerErroresCampo] = useState({})
-  const [mensajeError, establecerMensajeError] = useState('')
+  const [erroresServidor, establecerErroresServidor] = useState({})
+  const [mensajeErrorGeneral, establecerMensajeErrorGeneral] = useState('')
   const [mensajeExito, establecerMensajeExito] = useState('')
-  const [cargando, establecerCargando] = useState(false)
+  const [enviando, establecerEnviando] = useState(false)
   const [mostrarContrasena, establecerMostrarContrasena] = useState(false)
+  const alertaErrorRef = useRef(null)
 
   const rolesPermitidos = sesion.rolActivo === 'ADMIN'
     ? ROLES
     : ROLES.filter((rol) => rol.codigo !== 'ADMIN')
+  const erroresVisibles = { ...erroresServidor, ...erroresCampo }
+  const erroresParaAlerta = Object.entries(erroresVisibles)
+    .filter(([campo]) => ETIQUETAS_CAMPOS[campo])
+
+  useEffect(() => {
+    if (!mensajeErrorGeneral || !alertaErrorRef.current) return
+    alertaErrorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    alertaErrorRef.current.focus({ preventScroll: true })
+  }, [mensajeErrorGeneral])
 
   function actualizarCampo(evento) {
     const { name, value } = evento.target
@@ -51,8 +71,13 @@ export function CrearUsuario() {
       if (name === 'contrasena') delete nuevosErrores.confirmarContrasena
       return nuevosErrores
     })
-    establecerMensajeError('')
-    establecerMensajeExito('')
+    establecerErroresServidor((actuales) => {
+      const nuevosErrores = { ...actuales }
+      delete nuevosErrores[name]
+      if (name === 'contrasena') delete nuevosErrores.confirmarContrasena
+      return nuevosErrores
+    })
+    establecerMensajeErrorGeneral('')
   }
 
   function validarCampo(campo, datos = formulario, roles = rolesSeleccionados) {
@@ -78,33 +103,42 @@ export function CrearUsuario() {
       delete nuevosErrores.roles
       return nuevosErrores
     })
-    establecerMensajeError('')
-    establecerMensajeExito('')
+    establecerErroresServidor((actuales) => {
+      const nuevosErrores = { ...actuales }
+      delete nuevosErrores.roles
+      return nuevosErrores
+    })
+    establecerMensajeErrorGeneral('')
   }
 
   async function enviarFormulario(evento) {
     evento.preventDefault()
-    establecerMensajeError('')
+    if (enviando) return
+    establecerMensajeErrorGeneral('')
     establecerMensajeExito('')
+    establecerErroresServidor({})
     const errores = validarFormularioUsuario(
       { ...formulario, roles: rolesSeleccionados },
       rolesPermitidos,
     )
     establecerErroresCampo(errores)
     if (Object.keys(errores).length > 0) {
-      establecerMensajeError('Revisa los campos indicados antes de crear el usuario.')
+      establecerMensajeErrorGeneral('Revisa los campos indicados antes de crear el usuario.')
       return
     }
 
-    establecerCargando(true)
+    establecerEnviando(true)
     try {
       const usuario = await crearUsuario({
         token: sesion.tokenAcceso,
         ...formulario,
         roles: rolesSeleccionados,
       })
+      const rolesRegistrados = Array.isArray(usuario.roles) && usuario.roles.length > 0
+        ? usuario.roles
+        : rolesSeleccionados
       const nombresRoles = ROLES
-        .filter((rol) => usuario.roles?.includes(rol.codigo))
+        .filter((rol) => rolesRegistrados.includes(rol.codigo))
         .map((rol) => rol.nombre)
       establecerMensajeExito(
         `La cuenta de ${usuario.first_name} ${usuario.last_name} (${usuario.email}) se creó correctamente con el rol${nombresRoles.length === 1 ? '' : 'es'}: ${nombresRoles.join(', ')}.`,
@@ -114,10 +148,12 @@ export function CrearUsuario() {
       establecerErroresCampo({})
       establecerMostrarContrasena(false)
     } catch (errorSolicitud) {
-      establecerMensajeError(errorSolicitud.message || 'No se pudo crear el usuario. Inténtalo nuevamente.')
-      establecerErroresCampo(errorSolicitud.erroresCampo ?? {})
+      const erroresRespuesta = errorSolicitud.erroresCampo ?? {}
+      establecerMensajeErrorGeneral(errorSolicitud.message || 'No se pudo crear el usuario. Inténtalo nuevamente.')
+      establecerErroresServidor(erroresRespuesta)
+      establecerErroresCampo({})
     } finally {
-      establecerCargando(false)
+      establecerEnviando(false)
     }
   }
 
@@ -194,20 +230,27 @@ export function CrearUsuario() {
                 <button type="button" onClick={() => establecerMensajeExito('')} aria-label="Cerrar mensaje de éxito" className="shrink-0 text-xl leading-none">×</button>
               </div>
             )}
-            {mensajeError && (
-              <div role="alert" aria-live="assertive" className="mt-6 flex items-start justify-between gap-4 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950">
+            {mensajeErrorGeneral && (
+              <div
+                ref={alertaErrorRef}
+                tabIndex={-1}
+                role="alert"
+                aria-live="assertive"
+                className="mt-6 flex items-start justify-between gap-4 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950 outline-none focus:ring-2 focus:ring-red-700/30"
+              >
                 <div>
-                  <p className="font-semibold">{mensajeError}</p>
-                  {Object.entries(erroresCampo).some(([campo]) => campo !== 'confirmarContrasena') && (
+                  <p className="font-semibold">{mensajeErrorGeneral}</p>
+                  {erroresParaAlerta.length > 0 && (
                     <ul className="mt-2 list-inside list-disc space-y-1">
-                      {Object.entries(erroresCampo)
-                        .filter(([campo]) => campo !== 'confirmarContrasena')
-                        .flatMap(([campo, mensajes]) => (Array.isArray(mensajes) ? mensajes : [mensajes]).map((mensaje) => `${campo}: ${mensaje}`))
-                        .map((mensaje) => <li key={mensaje}>{mensaje}</li>)}
+                      {erroresParaAlerta.flatMap(([campo, mensajes]) => (
+                        (Array.isArray(mensajes) ? mensajes : [mensajes]).map((mensaje, indice) => (
+                          <li key={`${campo}-${indice}`}>{ETIQUETAS_CAMPOS[campo]}: {mensaje}</li>
+                        ))
+                      ))}
                     </ul>
                   )}
                 </div>
-                <button type="button" onClick={() => establecerMensajeError('')} aria-label="Cerrar mensaje de error" className="shrink-0 text-xl leading-none">×</button>
+                <button type="button" onClick={() => establecerMensajeErrorGeneral('')} aria-label="Cerrar mensaje de error" className="shrink-0 text-xl leading-none">×</button>
               </div>
             )}
 
@@ -226,11 +269,11 @@ export function CrearUsuario() {
                       value={formulario.nombre}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('nombre')}
-                      aria-invalid={Boolean(erroresCampo.nombre)}
-                      aria-describedby={erroresCampo.nombre ? 'nombre-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.nombre ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.nombre)}
+                      aria-describedby={erroresVisibles.nombre ? 'nombre-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.nombre ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.nombre && <span id="nombre-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.nombre)}</span>}
+                    {erroresVisibles.nombre && <span id="nombre-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.nombre)}</span>}
                   </label>
                   <label className="block text-sm font-semibold" htmlFor="apellido-usuario">
                     Apellido <span className="text-[#5D737E]">*</span>
@@ -243,11 +286,11 @@ export function CrearUsuario() {
                       value={formulario.apellido}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('apellido')}
-                      aria-invalid={Boolean(erroresCampo.apellido)}
-                      aria-describedby={erroresCampo.apellido ? 'apellido-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.apellido ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.apellido)}
+                      aria-describedby={erroresVisibles.apellido ? 'apellido-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.apellido ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.apellido && <span id="apellido-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.apellido)}</span>}
+                    {erroresVisibles.apellido && <span id="apellido-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.apellido)}</span>}
                   </label>
                   <label className="block text-sm font-semibold sm:col-span-2" htmlFor="correo-usuario">
                     Correo electrónico / nombre de usuario <span className="text-[#5D737E]">*</span>
@@ -260,12 +303,12 @@ export function CrearUsuario() {
                       value={formulario.correo}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('correo')}
-                      aria-invalid={Boolean(erroresCampo.correo)}
-                      aria-describedby={erroresCampo.correo ? 'correo-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.correo ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.correo)}
+                      aria-describedby={erroresVisibles.correo ? 'correo-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.correo ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                       placeholder="nombre@institucion.edu"
                     />
-                    {erroresCampo.correo && <span id="correo-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.correo)}</span>}
+                    {erroresVisibles.correo && <span id="correo-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.correo)}</span>}
                   </label>
                   <label className="block text-sm font-semibold sm:col-span-2" htmlFor="institucion-usuario">
                     Institución o afiliación <span className="text-[#5D737E]">*</span>
@@ -278,12 +321,12 @@ export function CrearUsuario() {
                       value={formulario.institucion}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('institucion')}
-                      aria-invalid={Boolean(erroresCampo.institucion)}
-                      aria-describedby={erroresCampo.institucion ? 'institucion-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.institucion ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.institucion)}
+                      aria-describedby={erroresVisibles.institucion ? 'institucion-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.institucion ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                       placeholder="Universidad o centro de investigación"
                     />
-                    {erroresCampo.institucion && <span id="institucion-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.institucion)}</span>}
+                    {erroresVisibles.institucion && <span id="institucion-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.institucion)}</span>}
                   </label>
                 </div>
               </section>
@@ -295,21 +338,21 @@ export function CrearUsuario() {
                 <p className="mt-1 text-sm text-[#3F4045]">Puedes asignar uno o varios roles permitidos.</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {rolesPermitidos.map((rol) => (
-                    <label key={rol.codigo} className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${erroresCampo.roles ? 'border-red-700 bg-red-50' : rolesSeleccionados.includes(rol.codigo) ? 'border-[#5D737E] bg-[#E3E7D3]' : 'border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]'}`}>
+                    <label key={rol.codigo} className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${erroresVisibles.roles ? 'border-red-700 bg-red-50' : rolesSeleccionados.includes(rol.codigo) ? 'border-[#5D737E] bg-[#E3E7D3]' : 'border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]'}`}>
                       <input
                         type="checkbox"
                         checked={rolesSeleccionados.includes(rol.codigo)}
                         onChange={() => alternarRol(rol.codigo)}
                         onBlur={() => validarCampo('roles')}
-                        aria-invalid={Boolean(erroresCampo.roles)}
-                        aria-describedby={erroresCampo.roles ? 'roles-usuario-error' : undefined}
+                        aria-invalid={Boolean(erroresVisibles.roles)}
+                        aria-describedby={erroresVisibles.roles ? 'roles-usuario-error' : undefined}
                         className="checkbox checkbox-primary mt-0.5 rounded-none"
                       />
                       <span className="text-sm font-semibold">{rol.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {erroresCampo.roles && <p id="roles-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.roles)}</p>}
+                {erroresVisibles.roles && <p id="roles-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.roles)}</p>}
               </section>
 
               <section aria-labelledby="contrasena-usuario">
@@ -337,11 +380,11 @@ export function CrearUsuario() {
                       value={formulario.contrasena}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('contrasena')}
-                      aria-invalid={Boolean(erroresCampo.contrasena)}
-                      aria-describedby={erroresCampo.contrasena ? 'contrasena-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.contrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.contrasena)}
+                      aria-describedby={erroresVisibles.contrasena ? 'contrasena-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.contrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.contrasena && <span id="contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.contrasena)}</span>}
+                    {erroresVisibles.contrasena && <span id="contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.contrasena)}</span>}
                   </label>
                   <label className="block text-sm font-semibold" htmlFor="confirmar-contrasena-usuario">
                     Confirmar contraseña <span className="text-[#5D737E]">*</span>
@@ -353,11 +396,11 @@ export function CrearUsuario() {
                       value={formulario.confirmarContrasena}
                       onChange={actualizarCampo}
                       onBlur={() => validarCampo('confirmarContrasena')}
-                      aria-invalid={Boolean(erroresCampo.confirmarContrasena)}
-                      aria-describedby={erroresCampo.confirmarContrasena ? 'confirmar-contrasena-usuario-error' : undefined}
-                      className={`${CLASE_CAMPO} ${erroresCampo.confirmarContrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
+                      aria-invalid={Boolean(erroresVisibles.confirmarContrasena)}
+                      aria-describedby={erroresVisibles.confirmarContrasena ? 'confirmar-contrasena-usuario-error' : undefined}
+                      className={`${CLASE_CAMPO} ${erroresVisibles.confirmarContrasena ? 'border-red-700 focus:border-red-700 focus:ring-red-700/20' : ''}`}
                     />
-                    {erroresCampo.confirmarContrasena && <span id="confirmar-contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresCampo.confirmarContrasena)}</span>}
+                    {erroresVisibles.confirmarContrasena && <span id="confirmar-contrasena-usuario-error" className={CLASE_ERROR}>{mostrarMensajes(erroresVisibles.confirmarContrasena)}</span>}
                   </label>
                 </div>
               </section>
@@ -368,10 +411,10 @@ export function CrearUsuario() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={cargando}
+                  disabled={enviando}
                   className="min-h-12 border border-[#02111B] bg-[#02111B] px-7 font-semibold text-white transition hover:bg-[#5D737E] disabled:cursor-wait disabled:opacity-60"
                 >
-                  {cargando ? 'Creando usuario…' : 'Crear usuario'}
+                  {enviando ? 'Registrando usuario...' : 'Crear usuario'}
                 </button>
               </div>
             </form>
