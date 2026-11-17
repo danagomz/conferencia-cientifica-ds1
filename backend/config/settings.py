@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+
+from corsheaders.defaults import default_headers
 from datetime import timedelta
 from decouple import config, Csv
 import dj_database_url
@@ -166,4 +168,5 @@ TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
 # CORS: orígenes (frontend) autorizados a llamar a la API desde el navegador.
 # Lista separada por comas, p. ej. CORS_ALLOWED_ORIGINS=https://mi-app.vercel.app
 # En desarrollo local no hace falta: Vite reenvía /api a Django.
+CORS_ALLOW_HEADERS = (*default_headers, 'x-rol-activo')
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())

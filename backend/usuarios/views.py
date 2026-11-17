@@ -2,16 +2,20 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
 from .permissions import EsAdminOComite
-from .queries import consultar_usuarios
 from .serializers import UsuarioCrearSerializer, UsuarioConsultaSerializer
 
 
 class UsuarioCrearView(APIView):
-    """GET consulta usuarios y POST crea usuarios."""
+    """GET consulta usuarios (según el rol) y POST crea usuarios (ADMIN o COMITE)."""
 
-
-    permission_classes = [EsAdminOComite]
+    def get_permissions(self):
+        # Consultar: cualquier usuario con sesión, pero solo ve lo que su rol permite (SDGC-125).
+        # Crear: solo ADMIN o COMITE.
+        if self.request.method == 'GET':
+            return [PuedeConsultarUsuarios()]
+        return [EsAdminOComite()]
 
     def post(self, request):
         serializer = UsuarioCrearSerializer(data=request.data, context={'request': request})
@@ -20,10 +24,11 @@ class UsuarioCrearView(APIView):
         return Response(UsuarioCrearSerializer(usuario).data, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        usuarios = consultar_usuarios()
+        usuarios = usuarios_visibles(request)
         serializer = UsuarioConsultaSerializer(usuarios, many=True)
 
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
         )
+

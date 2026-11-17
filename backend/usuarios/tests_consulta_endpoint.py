@@ -129,9 +129,11 @@ class ConsultarUsuariosEndpointTests(APITestCase):
         self.assertIn(respuesta.status_code, (401, 403))
 
 
-    def test_autor_no_puede_consultar_listado_completo(self):
+    def test_autor_solo_consulta_sus_propios_datos(self):
+        # Permisos definitivos (SDGC-125): el autor no recibe el listado completo.
         self.client.force_authenticate(self.autor)
 
         respuesta = self.client.get(URL)
 
-        self.assertEqual(respuesta.status_code, 403)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual([u['id'] for u in respuesta.data], [self.autor.id])
