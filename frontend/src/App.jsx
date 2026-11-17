@@ -14,6 +14,7 @@ import { ConfiguracionConferencia } from "./pages/ConfiguracionConferencia";
 import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
+import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
 
 function PaginaInicioSesion() {
   const { sesion, iniciarSesion } = useAutenticacion();
@@ -86,6 +87,18 @@ function PaginaCrearUsuario() {
   return <CrearUsuario />;
 }
 
+function PaginaUsuarios() {
+  const { sesion } = useAutenticacion();
+
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+
+  if (!["ADMIN", "COMITE"].includes(sesion.rolActivo)) {
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  }
+
+  return <ListadoUsuarios />;
+}
+
 function RedireccionInicial() {
   const { sesion } = useAutenticacion();
   return <Navigate to={sesion ? rutaInicial(sesion) : "/login"} replace />;
@@ -108,7 +121,11 @@ function Aplicacion() {
             path="/configuracion-conferencia"
             element={<PaginaConfiguracionConferencia />}
           />
-          <Route path="/gestion/usuarios/nuevo" element={<PaginaCrearUsuario />} />
+          <Route
+            path="/gestion/usuarios/nuevo"
+            element={<PaginaCrearUsuario />}
+          />
+          <Route path="/gestion/usuarios" element={<PaginaUsuarios />} />
           <Route path="/gestion/articulos" element={<PaginaArticulos />} />
           <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
           {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
