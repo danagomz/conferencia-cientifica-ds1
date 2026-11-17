@@ -3,11 +3,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import EsAdminOComite
-from .serializers import UsuarioCrearSerializer
+from .queries import consultar_usuarios
+from .serializers import UsuarioCrearSerializer, UsuarioConsultaSerializer
 
 
 class UsuarioCrearView(APIView):
-    """POST /api/usuarios/ — crea un usuario (solo ADMIN o COMITE)."""
+    """GET consulta usuarios y POST crea usuarios."""
+
 
     permission_classes = [EsAdminOComite]
 
@@ -16,3 +18,12 @@ class UsuarioCrearView(APIView):
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
         return Response(UsuarioCrearSerializer(usuario).data, status=status.HTTP_201_CREATED)
+
+    def get(self, request):
+        usuarios = consultar_usuarios()
+        serializer = UsuarioConsultaSerializer(usuarios, many=True)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
