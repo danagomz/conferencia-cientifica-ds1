@@ -627,7 +627,7 @@ function mensajeErrorConsultaUsuarios(error) {
   if (!axios.isAxiosError(error)) throw error;
 
   const estado = error.response?.status;
-  const detalle = error.response?.detail;
+  const detalle = error.response?.data?.detail;
 
   if (!error.response) {
     return "No fue posible conectarse al servidor.";
