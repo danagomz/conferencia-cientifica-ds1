@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Marca } from "../../components/Marca";
+import { obtenerUsuarios } from "../../autenticacion/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
 
@@ -36,19 +38,57 @@ function EstadoVacio() {
   );
 }
 
+function FilasEsqueleto() {
+  return (
+    <div role="status" className="divide-y divide-line bg-panel">
+      <span className="sr-only">Cargando usuarios…</span>
+
+      {Array.from({ length: 5 }, (_, indice) => (
+        <div
+          key={indice}
+          aria-hidden="true"
+          className="grid gap-3 px-6 py-5 sm:grid-cols-[1.2fr_1.2fr_1fr_1fr] sm:items-center sm:gap-5"
+        >
+          <div className="h-10 w-10 animate-pulse rounded-full bg-soft" />
+          <div className="h-4 w-4/5 animate-pulse rounded bg-soft" />
+          <div className="h-4 w-3/5 animate-pulse rounded bg-soft" />
+          <div className="h-4 w-2/5 animate-pulse rounded bg-soft" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function inicialUsuario(usuario) {
+  const nombre = usuario.first_name?.trim() || usuario.email?.trim() || "?";
+  return nombre.charAt(0).toUpperCase();
+}
+
 function FilaUsuario({ usuario }) {
   const roles = Array.isArray(usuario.roles) ? usuario.roles : [];
+  const nombreCompleto = [usuario.first_name, usuario.last_name]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="grid gap-3 border-b border-line px-6 py-5 last:border-b-0 sm:grid-cols-[1.2fr_1.2fr_1fr_1fr] sm:items-center sm:gap-5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-fg">
-          {usuario.nombre}
-        </p>
-        <p className="mt-1 text-xs text-muted">Usuario registrado</p>
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          aria-label={`Inicial de ${nombreCompleto || usuario.email}`}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-brand-fg"
+        >
+          {inicialUsuario(usuario)}
+        </span>
+
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-fg">
+            {nombreCompleto || "Nombre no registrado"}
+          </p>
+          <p className="mt-1 text-xs text-muted">Usuario registrado</p>
+        </div>
       </div>
 
-      <p className="truncate text-sm text-muted">{usuario.correo}</p>
+      <p className="truncate text-sm text-muted">{usuario.email}</p>
 
       <p className="truncate text-sm text-muted">
         {usuario.institucion || "Sin institución registrada"}
@@ -72,8 +112,43 @@ function FilaUsuario({ usuario }) {
   );
 }
 
-export function ListadoUsuarios({ usuarios = [] }) {
+export function ListadoUsuarios() {
   const { sesion } = useAutenticacion();
+  const [usuarios, establecerUsuarios] = useState([]);
+  const [cargando, establecerCargando] = useState(true);
+  const [error, establecerError] = useState("");
+  const [intento, establecerIntento] = useState(0);
+
+  useEffect(() => {
+    let activo = true;
+
+    obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo)
+      .then((datos) => {
+        if (activo) establecerUsuarios(datos);
+      })
+      .catch((errorSolicitud) => {
+        if (activo) {
+          establecerError(
+            errorSolicitud instanceof Error
+              ? errorSolicitud.message
+              : "No se pudo cargar el listado de usuarios.",
+          );
+        }
+      })
+      .finally(() => {
+        if (activo) establecerCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [sesion?.tokenAcceso, sesion?.rolActivo, intento]);
+
+  function reintentar() {
+    establecerCargando(true);
+    establecerError("");
+    establecerIntento((actual) => actual + 1);
+  }
 
   const rutaInicioRol = sesion?.rolActivo
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
@@ -161,12 +236,8 @@ export function ListadoUsuarios({ usuarios = [] }) {
               id="titulo-listado-usuarios"
               className="font-display text-lg font-bold text-fg"
             >
-              Lista de usuarios
+              Listado de usuarios
             </h2>
-
-            <p className="mt-1 text-xs text-muted">
-              La información se cargará desde el servidor.
-            </p>
           </div>
 
           <div
@@ -179,15 +250,29 @@ export function ListadoUsuarios({ usuarios = [] }) {
             <span>Roles</span>
           </div>
 
-          {usuarios.length === 0 ? (
+          {cargando ? (
+            <FilasEsqueleto />
+          ) : error ? (
+            <div
+              role="alert"
+              className="flex flex-col items-center gap-3 bg-panel px-6 py-16 text-center"
+            >
+              <p className="text-sm font-semibold text-fg">{error}</p>
+
+              <button
+                type="button"
+                onClick={reintentar}
+                className="border-b border-highlight pb-1 text-sm font-semibold text-highlight hover:text-brand"
+              >
+                Intentar nuevamente
+              </button>
+            </div>
+          ) : usuarios.length === 0 ? (
             <EstadoVacio />
           ) : (
             <div>
               {usuarios.map((usuario) => (
-                <FilaUsuario
-                  key={usuario.id ?? usuario.correo}
-                  usuario={usuario}
-                />
+                <FilaUsuario key={usuario.id} usuario={usuario} />
               ))}
             </div>
           )}
