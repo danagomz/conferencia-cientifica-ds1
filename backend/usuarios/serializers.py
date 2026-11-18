@@ -165,3 +165,36 @@ class RegistroAutorSerializer(UsuarioCrearSerializer):
 
     def roles_a_asignar(self, datos):
         return [AUTOR]
+
+class UsuarioConsultaSerializer(serializers.ModelSerializer):
+    """Serializador para consultar la información permitida de los usuarios."""
+
+    institucion = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'institucion',
+            'roles',
+        ]
+
+    def get_institucion(self, usuario):
+        if hasattr(usuario, 'perfil'):
+            return usuario.perfil.institucion
+        return None
+
+    def get_roles(self, usuario):
+        roles_asignados = {
+            asignacion.rol.nombre_rol
+            for asignacion in usuario.roles_asignados.all()
+        }
+
+        return [
+            rol for rol in ROLES_VALIDOS
+            if rol in roles_asignados
+        ]
