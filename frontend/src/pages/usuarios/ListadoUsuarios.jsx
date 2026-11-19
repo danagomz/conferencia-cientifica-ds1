@@ -5,6 +5,12 @@ import { obtenerUsuarios } from "../../autenticacion/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
 
+const ROLES_FILTRO = [
+  { valor: "ADMIN", etiqueta: "Administrador" },
+  { valor: "COMITE", etiqueta: "Comité científico" },
+  { valor: "AUTOR", etiqueta: "Autor" },
+];
+
 function EstadoVacio() {
   return (
     <div
@@ -55,6 +61,69 @@ function FilasEsqueleto() {
           <div className="h-4 w-2/5 animate-pulse rounded bg-soft" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function ControlesFiltrosUsuarios({
+  nombre,
+  rol,
+  alCambiarNombre,
+  alCambiarRol,
+  alLimpiar,
+  hayFiltrosActivos,
+}) {
+  return (
+    <div className="border-b border-line bg-soft/20 px-4 py-4 sm:px-6">
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-fg">Filtrar usuarios</h3>
+        <p className="mt-1 text-xs text-muted">
+          Combina los criterios para encontrar una cuenta específica.
+        </p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(12rem,0.8fr)_auto] lg:items-end">
+        <label className="form-control w-full">
+          <span className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+            Nombre
+          </span>
+          <input
+            type="search"
+            value={nombre}
+            onChange={(evento) => alCambiarNombre(evento.target.value)}
+            placeholder="Buscar por nombre"
+            aria-label="Filtrar usuarios por nombre"
+            className="input input-bordered min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg placeholder:text-muted/70 focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+          />
+        </label>
+
+        <label className="form-control w-full">
+          <span className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+            Rol
+          </span>
+          <select
+            value={rol}
+            onChange={(evento) => alCambiarRol(evento.target.value)}
+            aria-label="Filtrar usuarios por rol"
+            className="select select-bordered min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+          >
+            <option value="">Todos los roles</option>
+
+            {ROLES_FILTRO.map((opcion) => (
+              <option key={opcion.valor} value={opcion.valor}>
+                {opcion.etiqueta}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={alLimpiar}
+          disabled={!hayFiltrosActivos}
+          className="btn btn-outline min-h-11 rounded-none border-line px-5 text-sm font-semibold text-highlight hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Limpiar filtros
+        </button>
+      </div>
     </div>
   );
 }
@@ -118,6 +187,8 @@ export function ListadoUsuarios() {
   const [cargando, establecerCargando] = useState(true);
   const [error, establecerError] = useState("");
   const [intento, establecerIntento] = useState(0);
+  const [nombreFiltro, establecerNombreFiltro] = useState("");
+  const [rolFiltro, establecerRolFiltro] = useState("");
 
   useEffect(() => {
     let activo = true;
@@ -149,6 +220,13 @@ export function ListadoUsuarios() {
     establecerError("");
     establecerIntento((actual) => actual + 1);
   }
+
+  function limpiarFiltros() {
+    establecerNombreFiltro("");
+    establecerRolFiltro("");
+  }
+
+  const hayFiltrosActivos = Boolean(nombreFiltro.trim() || rolFiltro);
 
   const rutaInicioRol = sesion?.rolActivo
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
@@ -239,6 +317,15 @@ export function ListadoUsuarios() {
               Listado de usuarios
             </h2>
           </div>
+
+          <ControlesFiltrosUsuarios
+            nombre={nombreFiltro}
+            rol={rolFiltro}
+            alCambiarNombre={establecerNombreFiltro}
+            alCambiarRol={establecerRolFiltro}
+            alLimpiar={limpiarFiltros}
+            hayFiltrosActivos={hayFiltrosActivos}
+          />
 
           <div
             aria-hidden="true"
