@@ -193,7 +193,10 @@ export function ListadoUsuarios() {
   useEffect(() => {
     let activo = true;
 
-    obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo)
+    obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo, {
+      nombre: nombreFiltro,
+      rol: rolFiltro,
+    })
       .then((datos) => {
         if (activo) establecerUsuarios(datos);
       })
@@ -213,7 +216,13 @@ export function ListadoUsuarios() {
     return () => {
       activo = false;
     };
-  }, [sesion?.tokenAcceso, sesion?.rolActivo, intento]);
+  }, [
+    sesion?.tokenAcceso,
+    sesion?.rolActivo,
+    nombreFiltro,
+    rolFiltro,
+    intento,
+  ]);
 
   function reintentar() {
     establecerCargando(true);

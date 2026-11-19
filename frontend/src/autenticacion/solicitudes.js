@@ -648,7 +648,7 @@ function mensajeErrorConsultaUsuarios(error) {
   return detalle || "No fue posible cargar el listado de usuarios";
 }
 
-export async function obtenerUsuarios(token, rolActivo) {
+export async function obtenerUsuarios(token, rolActivo, filtros = {}) {
   if (!token) {
     throw new Error("Inicia sesión para consultar usuarios");
   }
@@ -657,12 +657,23 @@ export async function obtenerUsuarios(token, rolActivo) {
     throw new Error("Selecciona un rol activo antes de consultar usuarios");
   }
 
+  const params = {};
+
+  if (filtros.nombre?.trim()) {
+    params.nombre = filtros.nombre.trim();
+  }
+
+  if (filtros.rol) {
+    params.rol = filtros.rol;
+  }
+
   try {
     const respuesta = await axios.get(RUTA_CONSULTAR_USUARIOS, {
       headers: {
         Authorization: `Bearer ${token}`,
         "X-Rol-Activo": rolActivo,
       },
+      params,
     });
 
     if (!Array.isArray(respuesta.data)) {
