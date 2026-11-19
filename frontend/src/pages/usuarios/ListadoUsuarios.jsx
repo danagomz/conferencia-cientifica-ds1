@@ -4,6 +4,13 @@ import { Marca } from "../../components/Marca";
 import { obtenerUsuarios } from "../../autenticacion/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
+import { useDebounce } from "../../hooks/useDebounce";
+
+const ROLES_FILTRO = [
+  { valor: "ADMIN", etiqueta: "Administrador" },
+  { valor: "COMITE", etiqueta: "Comité científico" },
+  { valor: "AUTOR", etiqueta: "Autor" },
+];
 
 function EstadoVacio() {
   return (
@@ -38,6 +45,44 @@ function EstadoVacio() {
   );
 }
 
+function EstadoSinResultados() {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center gap-3 bg-panel px-6 py-16 text-center"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        className="h-10 w-10 text-muted"
+      >
+        <circle
+          cx="11"
+          cy="11"
+          r="6.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <path
+          d="m16 16 4 4M8.5 11h5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      <p className="text-sm font-semibold text-fg">
+        No se encontraron usuarios
+      </p>
+
+      <p className="max-w-sm text-xs text-muted">
+        No hay usuarios que coincidan con los filtros seleccionados.
+      </p>
+    </div>
+  );
+}
+
 function FilasEsqueleto() {
   return (
     <div role="status" className="divide-y divide-line bg-panel">
@@ -55,6 +100,69 @@ function FilasEsqueleto() {
           <div className="h-4 w-2/5 animate-pulse rounded bg-soft" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function ControlesFiltrosUsuarios({
+  nombre,
+  rol,
+  alCambiarNombre,
+  alCambiarRol,
+  alLimpiar,
+  hayFiltrosActivos,
+}) {
+  return (
+    <div className="border-b border-line bg-soft/20 px-4 py-4 sm:px-6">
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-fg">Filtrar usuarios</h3>
+        <p className="mt-1 text-xs text-muted">
+          Combina los criterios para encontrar una cuenta específica.
+        </p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(12rem,0.8fr)_auto] lg:items-end">
+        <label className="form-control w-full">
+          <span className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+            Nombre
+          </span>
+          <input
+            type="search"
+            value={nombre}
+            onChange={(evento) => alCambiarNombre(evento.target.value)}
+            placeholder="Buscar por nombre"
+            aria-label="Filtrar usuarios por nombre"
+            className="input input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none placeholder:text-muted/80 focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
+          />
+        </label>
+
+        <label className="form-control w-full">
+          <span className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+            Rol
+          </span>
+          <select
+            value={rol}
+            onChange={(evento) => alCambiarRol(evento.target.value)}
+            aria-label="Filtrar usuarios por rol"
+            className="select select-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
+          >
+            <option value="">Todos los roles</option>
+
+            {ROLES_FILTRO.map((opcion) => (
+              <option key={opcion.valor} value={opcion.valor}>
+                {opcion.etiqueta}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={alLimpiar}
+          disabled={!hayFiltrosActivos}
+          className="btn btn-outline min-h-12 rounded-none border-2 border-highlight bg-panel px-5 text-sm font-bold text-brand shadow-sm transition hover:border-brand hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-60"
+        >
+          Limpiar filtros
+        </button>
+      </div>
     </div>
   );
 }
@@ -118,11 +226,17 @@ export function ListadoUsuarios() {
   const [cargando, establecerCargando] = useState(true);
   const [error, establecerError] = useState("");
   const [intento, establecerIntento] = useState(0);
+  const [nombreFiltro, establecerNombreFiltro] = useState("");
+  const [rolFiltro, establecerRolFiltro] = useState("");
+  const nombreFiltroAplicado = useDebounce(nombreFiltro, 400);
 
   useEffect(() => {
     let activo = true;
 
-    obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo)
+    obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo, {
+      nombre: nombreFiltroAplicado,
+      rol: rolFiltro,
+    })
       .then((datos) => {
         if (activo) establecerUsuarios(datos);
       })
@@ -142,13 +256,28 @@ export function ListadoUsuarios() {
     return () => {
       activo = false;
     };
-  }, [sesion?.tokenAcceso, sesion?.rolActivo, intento]);
+  }, [
+    sesion?.tokenAcceso,
+    sesion?.rolActivo,
+    nombreFiltroAplicado,
+    rolFiltro,
+    intento,
+  ]);
 
   function reintentar() {
     establecerCargando(true);
     establecerError("");
     establecerIntento((actual) => actual + 1);
   }
+
+  function limpiarFiltros() {
+    establecerCargando(true);
+    establecerError("");
+    establecerNombreFiltro("");
+    establecerRolFiltro("");
+  }
+
+  const hayFiltrosActivos = Boolean(nombreFiltro.trim() || rolFiltro);
 
   const rutaInicioRol = sesion?.rolActivo
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
@@ -240,6 +369,15 @@ export function ListadoUsuarios() {
             </h2>
           </div>
 
+          <ControlesFiltrosUsuarios
+            nombre={nombreFiltro}
+            rol={rolFiltro}
+            alCambiarNombre={establecerNombreFiltro}
+            alCambiarRol={establecerRolFiltro}
+            alLimpiar={limpiarFiltros}
+            hayFiltrosActivos={hayFiltrosActivos}
+          />
+
           <div
             aria-hidden="true"
             className="hidden grid-cols-[1.2fr_1.2fr_1fr_1fr] gap-5 border-b border-line bg-soft px-6 py-3 text-xs font-bold uppercase tracking-wide text-muted sm:grid"
@@ -268,7 +406,11 @@ export function ListadoUsuarios() {
               </button>
             </div>
           ) : usuarios.length === 0 ? (
-            <EstadoVacio />
+            hayFiltrosActivos ? (
+              <EstadoSinResultados />
+            ) : (
+              <EstadoVacio />
+            )
           ) : (
             <div>
               {usuarios.map((usuario) => (
