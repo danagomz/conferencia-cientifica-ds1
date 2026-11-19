@@ -45,7 +45,7 @@ function EstadoVacio() {
   );
 }
 
-function EstadoSinResultados({ alLimpiar }) {
+function EstadoSinResultados() {
   return (
     <div
       role="status"
@@ -79,14 +79,6 @@ function EstadoSinResultados({ alLimpiar }) {
       <p className="max-w-sm text-xs text-muted">
         No hay usuarios que coincidan con los filtros seleccionados.
       </p>
-
-      <button
-        type="button"
-        onClick={alLimpiar}
-        className="border-b border-highlight pb-1 text-sm font-semibold text-highlight hover:text-brand"
-      >
-        Limpiar filtros
-      </button>
     </div>
   );
 }
@@ -279,6 +271,8 @@ export function ListadoUsuarios() {
   }
 
   function limpiarFiltros() {
+    establecerCargando(true);
+    establecerError("");
     establecerNombreFiltro("");
     establecerRolFiltro("");
   }
@@ -413,7 +407,7 @@ export function ListadoUsuarios() {
             </div>
           ) : usuarios.length === 0 ? (
             hayFiltrosActivos ? (
-              <EstadoSinResultados alLimpiar={limpiarFiltros} />
+              <EstadoSinResultados />
             ) : (
               <EstadoVacio />
             )
