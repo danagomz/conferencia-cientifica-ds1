@@ -1,8 +1,15 @@
-"""HU-003 (Filtrar usuarios): SDGC-75 lógica de filtrado."""
+"""HU-003 (Filtrar usuarios): SDGC-75 lógica de filtrado y SDGC-76 criterios de filtrado."""
 from django.db.models import Q
 from rest_framework import serializers
 
 from .roles import ROLES_VALIDOS
+
+ETIQUETAS_ROL = {
+    'ADMIN': 'Administrador',
+    'COMITE': 'Comité científico',
+    'AUTOR': 'Autor',
+}
+
 
 def aplicar_filtros(queryset, params):
     """Filtra el listado de usuarios (SDGC-75).
@@ -27,3 +34,23 @@ def aplicar_filtros(queryset, params):
             })
         queryset = queryset.filter(roles_asignados__rol__nombre_rol=rol)
     return queryset
+
+
+def criterios_de_filtrado():
+    """Criterios disponibles en el listado de usuarios (SDGC-76, CA-013).
+
+    Los dos criterios definidos en la HU son el nombre y el rol.
+    """
+    return {
+        'criterios': [
+            {'parametro': 'nombre', 'etiqueta': 'Nombre', 'tipo': 'texto'},
+            {
+                'parametro': 'rol',
+                'etiqueta': 'Rol',
+                'tipo': 'seleccion',
+                'opciones': [
+                    {'valor': rol, 'etiqueta': ETIQUETAS_ROL[rol]} for rol in ROLES_VALIDOS
+                ],
+            },
+        ]
+    }

@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .filtros import aplicar_filtros
+from .filtros import aplicar_filtros, criterios_de_filtrado
 from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
 from .permissions import EsAdminOComite
 from .serializers import UsuarioCrearSerializer, UsuarioConsultaSerializer
@@ -32,3 +32,12 @@ class UsuarioCrearView(APIView):
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+
+class UsuarioFiltrosView(APIView):
+    """GET /api/usuarios/filtros/ — criterios de filtrado disponibles (SDGC-76)."""
+
+    permission_classes = [PuedeConsultarUsuarios]
+
+    def get(self, request):
+        return Response(criterios_de_filtrado())
