@@ -139,7 +139,7 @@ function ControlesFiltrosUsuarios({
             onChange={(evento) => alCambiarNombre(evento.target.value)}
             placeholder="Buscar por nombre"
             aria-label="Filtrar usuarios por nombre"
-            className="input input-bordered min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg placeholder:text-muted/70 focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+            className="input input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none placeholder:text-muted/80 focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
           />
         </label>
 
@@ -151,7 +151,7 @@ function ControlesFiltrosUsuarios({
             value={rol}
             onChange={(evento) => alCambiarRol(evento.target.value)}
             aria-label="Filtrar usuarios por rol"
-            className="select select-bordered min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+            className="select select-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
           >
             <option value="">Todos los roles</option>
 
@@ -166,7 +166,7 @@ function ControlesFiltrosUsuarios({
           type="button"
           onClick={alLimpiar}
           disabled={!hayFiltrosActivos}
-          className="btn btn-outline min-h-11 rounded-none border-line px-5 text-sm font-semibold text-highlight hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn btn-outline min-h-12 rounded-none border-2 border-highlight bg-panel px-5 text-sm font-bold text-brand shadow-sm transition hover:border-brand hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-60"
         >
           Limpiar filtros
         </button>
