@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .filtros import aplicar_filtros
 from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
 from .permissions import EsAdminOComite
 from .serializers import UsuarioCrearSerializer, UsuarioConsultaSerializer
@@ -24,11 +25,10 @@ class UsuarioCrearView(APIView):
         return Response(UsuarioCrearSerializer(usuario).data, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        usuarios = usuarios_visibles(request)
+        usuarios = aplicar_filtros(usuarios_visibles(request), request.query_params)
         serializer = UsuarioConsultaSerializer(usuarios, many=True)
 
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
         )
-
