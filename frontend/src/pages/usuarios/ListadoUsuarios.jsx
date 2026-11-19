@@ -4,6 +4,7 @@ import { Marca } from "../../components/Marca";
 import { obtenerUsuarios } from "../../autenticacion/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
+import { useDebounce } from "../../hooks/useDebounce";
 
 const ROLES_FILTRO = [
   { valor: "ADMIN", etiqueta: "Administrador" },
@@ -40,6 +41,52 @@ function EstadoVacio() {
         Los usuarios registrados aparecerán aquí cuando se conecte la consulta
         con el servidor.
       </p>
+    </div>
+  );
+}
+
+function EstadoSinResultados({ alLimpiar }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col items-center gap-3 bg-panel px-6 py-16 text-center"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        className="h-10 w-10 text-muted"
+      >
+        <circle
+          cx="11"
+          cy="11"
+          r="6.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <path
+          d="m16 16 4 4M8.5 11h5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      <p className="text-sm font-semibold text-fg">
+        No se encontraron usuarios
+      </p>
+
+      <p className="max-w-sm text-xs text-muted">
+        No hay usuarios que coincidan con los filtros seleccionados.
+      </p>
+
+      <button
+        type="button"
+        onClick={alLimpiar}
+        className="border-b border-highlight pb-1 text-sm font-semibold text-highlight hover:text-brand"
+      >
+        Limpiar filtros
+      </button>
     </div>
   );
 }
@@ -189,12 +236,13 @@ export function ListadoUsuarios() {
   const [intento, establecerIntento] = useState(0);
   const [nombreFiltro, establecerNombreFiltro] = useState("");
   const [rolFiltro, establecerRolFiltro] = useState("");
+  const nombreFiltroAplicado = useDebounce(nombreFiltro, 400);
 
   useEffect(() => {
     let activo = true;
 
     obtenerUsuarios(sesion?.tokenAcceso, sesion?.rolActivo, {
-      nombre: nombreFiltro,
+      nombre: nombreFiltroAplicado,
       rol: rolFiltro,
     })
       .then((datos) => {
@@ -219,7 +267,7 @@ export function ListadoUsuarios() {
   }, [
     sesion?.tokenAcceso,
     sesion?.rolActivo,
-    nombreFiltro,
+    nombreFiltroAplicado,
     rolFiltro,
     intento,
   ]);
@@ -364,7 +412,11 @@ export function ListadoUsuarios() {
               </button>
             </div>
           ) : usuarios.length === 0 ? (
-            <EstadoVacio />
+            hayFiltrosActivos ? (
+              <EstadoSinResultados alLimpiar={limpiarFiltros} />
+            ) : (
+              <EstadoVacio />
+            )
           ) : (
             <div>
               {usuarios.map((usuario) => (
