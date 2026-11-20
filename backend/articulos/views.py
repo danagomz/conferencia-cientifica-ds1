@@ -181,6 +181,10 @@ class ArticuloVersionCrearView(APIView):
 
         numero_version = (ultima_version or 0) + 1
         tipo_version = 'ORIGINAL' if numero_version == 1 else 'CORREGIDA'
+        if numero_version == 1:
+            ArticuloCrearSerializer._validar_plazo_postulacion(
+                articulo.id_conferencia
+            )
 
         try:
             ruta = subir_pdf_articulo(

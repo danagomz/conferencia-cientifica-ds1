@@ -1,10 +1,12 @@
-﻿from unittest.mock import patch
+﻿from datetime import timedelta
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from rest_framework.test import APITestCase
 from storage3.utils import StorageException
 
-from conferencias.models import LineaTematica
+from conferencias.models import LineaTematica, Plazo
 from conferencias.tests_lineas import crear_conferencia, usuario_con_rol
 
 from .models import AutorArticulo, VersionArticulo
@@ -15,6 +17,13 @@ class CargarVersionArticuloTests(APITestCase):
 
     def setUp(self):
         self.conf = crear_conferencia()
+        ahora = timezone.now()
+        self.plazo_postulacion = Plazo.objects.create(
+            id_conferencia=self.conf,
+            tipo_plazo=Plazo.POSTULACION,
+            fecha_inicio=ahora - timedelta(days=1),
+            fecha_fin=ahora + timedelta(days=5),
+        )
         self.linea = LineaTematica.objects.create(
             id_conferencia=self.conf,
             nombre='Inteligencia artificial',
@@ -129,6 +138,42 @@ class CargarVersionArticuloTests(APITestCase):
         self.assertEqual(primera_version.id_usuario_carga, self.autor)
         self.assertEqual(segunda_version.id_usuario_carga, self.autor)
         self.assertEqual(subir.call_count, 2)
+
+    def test_rechaza_primera_version_con_plazo_vencido(self):
+        self.plazo_postulacion.fecha_fin = timezone.now() - timedelta(days=1)
+        self.plazo_postulacion.save(update_fields=['fecha_fin'])
+
+        self.client.force_authenticate(self.autor)
+
+        with patch('articulos.views.subir_pdf_articulo') as subir:
+            respuesta = self.client.post(
+                self.url,
+                {'archivo': self.archivo_pdf()},
+                format='multipart',
+            )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('venció', str(respuesta.data))
+        self.assertEqual(VersionArticulo.objects.count(), 0)
+        subir.assert_not_called()
+
+    def test_rechaza_primera_version_antes_del_inicio_del_plazo(self):
+        self.plazo_postulacion.fecha_inicio = timezone.now() + timedelta(days=1)
+        self.plazo_postulacion.save(update_fields=['fecha_inicio'])
+
+        self.client.force_authenticate(self.autor)
+
+        with patch('articulos.views.subir_pdf_articulo') as subir:
+            respuesta = self.client.post(
+                self.url,
+                {'archivo': self.archivo_pdf()},
+                format='multipart',
+            )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('no ha comenzado', str(respuesta.data))
+        self.assertEqual(VersionArticulo.objects.count(), 0)
+        subir.assert_not_called()
 
     def test_coautor_no_responsable_no_puede_cargar(self):
         self.client.force_authenticate(self.otro_autor)
