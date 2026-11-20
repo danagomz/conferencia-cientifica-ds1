@@ -115,3 +115,26 @@ class ArticuloDetalleDatosTests(APITestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertFalse(respuesta.data['cesion']['cargada'])
         self.assertIsNone(respuesta.data['cesion']['fecha'])
+
+    def test_autor_asociado_recupera_sus_datos_actuales(self):
+        self.client.force_authenticate(self.autor)
+
+        respuesta = self.client.get(self.url)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            respuesta.data['titulo'],
+            'Artículo para consultar detalle',
+        )
+        self.assertEqual(
+            respuesta.data['resumen'],
+            self.articulo.resumen,
+        )
+        self.assertEqual(
+            respuesta.data['palabras_clave'],
+            self.articulo.palabras_clave,
+        )
+        self.assertEqual(
+            respuesta.data['autores'][0]['email'],
+            'ana@x.co',
+        )
