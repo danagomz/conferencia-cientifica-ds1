@@ -161,6 +161,10 @@ SIMPLE_JWT = {
 # CAPTCHA del inicio de sesión (Cloudflare Turnstile)
 TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
 
+# Supabase Storage (almacenamiento de archivos PDF)
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_SECRET_KEY = config('SUPABASE_SECRET_KEY', default='')
+SUPABASE_BUCKET = config('SUPABASE_BUCKET', default='articulos-pdf')
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
