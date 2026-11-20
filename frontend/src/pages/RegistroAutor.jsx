@@ -115,8 +115,10 @@ export function RegistroAutor() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1440px] lg:min-h-[calc(100dvh-81px)] lg:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.8fr)]">
-        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-10 text-[#FCFCFC] sm:px-10 lg:px-12 lg:py-14">
+      <main className="grid w-full lg:min-h-[calc(100dvh-81px)] lg:grid-cols-[minmax(300px,32fr)_minmax(0,68fr)]">
+        {" "}
+        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-10 text-[#FCFCFC] sm:px-10 lg:px-12 lg:py-14 xl:px-16">
+          {" "}
           <div
             aria-hidden="true"
             className="absolute -right-20 top-28 h-64 w-64 rounded-full border border-[#5D737E]/50"
@@ -125,7 +127,6 @@ export function RegistroAutor() {
             aria-hidden="true"
             className="absolute -right-10 top-40 h-44 w-44 rounded-full border border-[#989C94]/40"
           />
-
           <div className="relative flex h-full flex-col">
             <h1 className="mt-8 max-w-xl font-display text-4xl font-bold leading-tight sm:text-5xl">
               Regístrate
@@ -195,7 +196,6 @@ export function RegistroAutor() {
             </div>
           </div>
         </aside>
-
         <section className="px-5 py-10 sm:px-10 lg:px-14 lg:py-14">
           <div className="mx-auto max-w-3xl">
             <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#BDC2BF] pb-5">
