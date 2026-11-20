@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Marca } from "../../components/Marca";
 import { infoEstado } from "../../articulos/estados";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../../articulos/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES } from "../../autenticacion/roles";
+import { DetalleArticuloModal } from "./DetalleArticuloModal";
 
 const MODOS = {
   todos: {
@@ -141,13 +142,21 @@ function ListadoArticulos({ modo = "todos" }) {
   const config = MODOS[modo] ?? MODOS.todos;
   const columnas = config.conAutor ? COLUMNAS_CON_AUTOR : COLUMNAS_SIN_AUTOR;
   const { sesion } = useAutenticacion();
+
+  const ubicacion = useLocation();
+  const [parametros, establecerParametros] = useSearchParams();
+  const idDetalle = parametros.get("detalle");
+
   const rutaInicioRol = sesion?.rolActivo
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
     : null;
+
   const [articulos, setArticulos] = useState([]);
   const [cargando, setCargando] = useState(true);
+
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
+
   const [lineaSeleccionada, setLineaSeleccionada] = useState("");
   const [estadoSeleccionado, setEstadoSeleccionado] = useState("");
   const [criterios, setCriterios] = useState({ lineas: [], estados: [] });
@@ -209,6 +218,12 @@ function ListadoArticulos({ modo = "todos" }) {
       activo = false;
     };
   }, [sesion?.tokenAcceso, modo, config.conFiltros]);
+
+  function cerrarDetalle() {
+    const nuevosParametros = new URLSearchParams(parametros);
+    nuevosParametros.delete("detalle");
+    establecerParametros(nuevosParametros);
+  }
 
   function reintentar() {
     setError("");
@@ -289,7 +304,6 @@ function ListadoArticulos({ modo = "todos" }) {
           </svg>
           <span className="font-medium text-fg">Artículos</span>
         </nav>
-
         {/* Encabezado */}
         <section className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-brand">
@@ -303,7 +317,6 @@ function ListadoArticulos({ modo = "todos" }) {
             {config.descripcion}
           </p>
         </section>
-
         {/* Contenedor lista */}
         <section className="overflow-hidden bg-panel shadow-md">
           <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
@@ -390,6 +403,7 @@ function ListadoArticulos({ modo = "todos" }) {
               className="flex flex-col items-center gap-3 bg-panel px-6 py-12 text-center"
             >
               <p className="text-sm font-medium text-fg">{error}</p>
+
               <button
                 type="button"
                 onClick={reintentar}
@@ -410,26 +424,30 @@ function ListadoArticulos({ modo = "todos" }) {
             <div className="divide-y divide-line bg-panel">
               {articulos.map((art) => {
                 const estado = infoEstado(art.estado);
-                const nombres = art.autores.map((a) => a.nombre);
+                const nombres = art.autores.map((autor) => autor.nombre);
                 const autores =
                   nombres.length > 1
                     ? `${nombres[0]} +${nombres.length - 1}`
                     : (nombres[0] ?? "");
 
                 const correoActual = sesion?.usuario?.correo?.toLowerCase();
+
                 const coautores = art.autores.filter(
                   (autor) => autor.email?.toLowerCase() !== correoActual,
                 );
 
                 return (
-                  <div
+                  <Link
                     key={art.id}
-                    className={`grid grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
+                    to={`${ubicacion.pathname}?detalle=${art.id}`}
+                    aria-label={`Consultar detalle de ${art.titulo}`}
+                    title={`Consultar detalle de ${art.titulo}`}
+                    className={`group grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 outline-none transition-colors hover:bg-soft/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight sm:items-center sm:gap-4 ${columnas}`}
                   >
                     <div className="min-w-0">
                       <span
                         title={art.titulo}
-                        className="block text-sm font-semibold text-fg sm:truncate"
+                        className="block min-w-0 text-sm font-semibold text-fg transition-colors group-hover:text-highlight sm:truncate"
                       >
                         {art.titulo}
                       </span>
@@ -471,12 +489,11 @@ function ListadoArticulos({ modo = "todos" }) {
                         {estado.etiqueta}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
           )}
-
           {/* Pie del listado */}
           <div className="border-t border-line bg-soft/40 px-4 py-4 text-xs text-muted sm:px-6">
             <span aria-live="polite">
@@ -488,6 +505,11 @@ function ListadoArticulos({ modo = "todos" }) {
             </span>
           </div>
         </section>
+        <DetalleArticuloModal
+          key={idDetalle ?? "sin-detalle"}
+          idArticulo={idDetalle}
+          alCerrar={cerrarDetalle}
+        />{" "}
       </main>
     </div>
   );
