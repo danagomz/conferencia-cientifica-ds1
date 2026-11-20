@@ -111,3 +111,29 @@ export async function listarArticulosPropios(token) {
 
   return resultados;
 }
+
+export async function obtenerArticulo(token, idArticulo) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar articulos");
+  }
+
+  if (!idArticulo) {
+    throw new Error("No se indicó un artículo a consultar");
+  }
+
+  try {
+    const respuesta = await axios.get(`${URL_ARTICULOS}${idArticulo}/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!respuesta.data || typeof respuesta.data !== "object") {
+      throw new Error("Se devolvió un detalle de artículo inválido");
+    }
+
+    return respuesta.data;
+  } catch (error) {
+    throw new Error(mensajeErrorConsulta(error), { cause: error });
+  }
+}
