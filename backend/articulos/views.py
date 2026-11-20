@@ -1,16 +1,21 @@
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
 from .filtros import aplicar_filtros, criterios_de_filtrado
+from .permisos_detalle import (
+    MENSAJE_NO_DISPONIBLE, MENSAJE_NO_ASOCIADO, PuedeConsultarDetalleArticulo, puede_ver_articulo,
+)
 from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
 from .serializers_consulta import ArticuloListadoSerializer
+from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 
 MENSAJE_SIN_RESULTADOS = 'No se encontraron artículos que coincidan con la consulta.'
@@ -116,3 +121,19 @@ class ArticulosPropiosView(APIView):
             'mensaje': None if resultados else MENSAJE_SIN_RESULTADOS,
             'resultados': resultados,
         })
+
+
+class ArticuloDetalleView(APIView):
+    """GET /api/articulos/<id>/ — detalle de un artículo (HU-011, SDGC-152 y SDGC-154)."""
+
+    permission_classes = [PuedeConsultarDetalleArticulo]
+
+    def get(self, request, pk):
+        # Si no existe o está deshabilitado: 404 para todos (CA-077).
+        articulo = consultar_articulos().filter(pk=pk).first()
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+        # Existe pero el usuario no puede verlo (p. ej. un autor con un artículo ajeno): 403.
+        if not puede_ver_articulo(request.user, articulo):
+            raise PermissionDenied(MENSAJE_NO_ASOCIADO)
+        return Response(ArticuloDetalleSerializer(articulo).data)
