@@ -107,7 +107,7 @@ export function RegistroAutor() {
             </span>
             <Link
               to="/login"
-              className="border border-[#5D737E] px-4 py-2 font-semibold text-[#02111B] transition hover:bg-[#E3E7D3]"
+              className="rounded-lg border border-[#5D737E] px-4 py-2 font-semibold text-[#02111B] transition hover:bg-[#E6E49F]/35"
             >
               Iniciar sesión
             </Link>
