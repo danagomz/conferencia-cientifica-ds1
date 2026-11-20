@@ -115,7 +115,7 @@ function EstadoVacioAutor() {
   );
 }
 
-function EstadoSinCoincidencias({ alLimpiar }) {
+function EstadoSinCoincidencias() {
   return (
     <div
       role="status"
@@ -124,16 +124,10 @@ function EstadoSinCoincidencias({ alLimpiar }) {
       <p className="text-sm font-semibold text-fg">
         No se encontraron artículos con esos filtros
       </p>
+
       <p className="max-w-xs text-xs text-muted">
-        Cambia los criterios o límpialos para volver al listado.
+        Cambia los criterios o utiliza el botón “Limpiar filtros”.
       </p>
-      <button
-        type="button"
-        onClick={alLimpiar}
-        className="mt-2 border-b border-highlight pb-1 text-sm font-semibold text-highlight hover:text-brand"
-      >
-        Limpiar filtros
-      </button>
     </div>
   );
 }
@@ -236,6 +230,8 @@ function ListadoArticulos({ modo = "todos" }) {
     config.conFiltros && Boolean(lineaSeleccionada || estadoSeleccionado);
 
   function limpiarFiltros() {
+    setCargando(true);
+    setError("");
     setLineaSeleccionada("");
     setEstadoSeleccionado("");
   }
@@ -323,26 +319,28 @@ function ListadoArticulos({ modo = "todos" }) {
 
           {/* Filtros listado */}
           {config.conFiltros && (
-            <div className="grid gap-4 border-b border-line bg-soft/20 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
+            <div className="grid gap-4 border-b-2 border-line bg-soft/40 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
               <div>
                 <label
                   htmlFor="filtro-linea"
-                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+                  className="mb-2 block text-xs font-bold uppercase tracking-wider text-fg"
                 >
                   Línea temática
                 </label>
+
                 <select
                   id="filtro-linea"
                   value={lineaSeleccionada}
                   onChange={(evento) =>
                     setLineaSeleccionada(evento.target.value)
                   }
-                  className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+                  className="select select-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
                 >
                   <option value="">Todas las líneas</option>
-                  {criterios.lineas.map((l) => (
-                    <option key={l.valor} value={l.valor}>
-                      {l.etiqueta}
+
+                  {criterios.lineas.map((linea) => (
+                    <option key={linea.valor} value={linea.valor}>
+                      {linea.etiqueta}
                     </option>
                   ))}
                 </select>
@@ -351,24 +349,26 @@ function ListadoArticulos({ modo = "todos" }) {
               <div>
                 <label
                   htmlFor="filtro-estado"
-                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted"
+                  className="mb-2 block text-xs font-bold uppercase tracking-wider text-fg"
                 >
                   Estado
                 </label>
+
                 <select
                   id="filtro-estado"
                   value={estadoSeleccionado}
                   onChange={(evento) =>
                     setEstadoSeleccionado(evento.target.value)
                   }
-                  className="select min-h-11 w-full rounded-none border-line bg-panel text-sm text-fg focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/30"
+                  className="select select-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
                 >
                   <option value="">Todos los estados</option>
-                  {criterios.estados.map((e) => (
-                    <option key={e.valor} value={e.valor}>
-                      {infoEstado(e.valor).etiqueta}
+
+                  {criterios.estados.map((estadoFiltro) => (
+                    <option key={estadoFiltro.valor} value={estadoFiltro.valor}>
+                      {infoEstado(estadoFiltro.valor).etiqueta}
                     </option>
-                  ))}{" "}
+                  ))}
                 </select>
               </div>
 
@@ -376,7 +376,7 @@ function ListadoArticulos({ modo = "todos" }) {
                 type="button"
                 onClick={limpiarFiltros}
                 disabled={!hayFiltrosActivos}
-                className="min-h-11 border border-line px-4 text-sm font-semibold text-highlight transition hover:border-highlight hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn btn-outline min-h-12 rounded-none border-2 border-highlight bg-panel px-5 text-sm font-bold text-brand shadow-sm transition hover:border-brand hover:bg-brand hover:text-brand-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-60"
               >
                 Limpiar filtros
               </button>
@@ -419,7 +419,7 @@ function ListadoArticulos({ modo = "todos" }) {
               <EstadoVacio />
             )
           ) : total === 0 ? (
-            <EstadoSinCoincidencias alLimpiar={limpiarFiltros} />
+            <EstadoSinCoincidencias />
           ) : (
             <div className="divide-y divide-line bg-panel">
               {articulos.map((art) => {
