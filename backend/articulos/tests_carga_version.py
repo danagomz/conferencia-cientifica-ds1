@@ -137,6 +137,8 @@ class CargarVersionArticuloTests(APITestCase):
 
         self.assertEqual(primera_version.id_usuario_carga, self.autor)
         self.assertEqual(segunda_version.id_usuario_carga, self.autor)
+        self.assertEqual(primera_version.id_articulo_id, self.articulo.id_articulo)
+        self.assertEqual(segunda_version.id_articulo_id, self.articulo.id_articulo)
         self.assertEqual(subir.call_count, 2)
 
     def test_rechaza_primera_version_con_plazo_vencido(self):
