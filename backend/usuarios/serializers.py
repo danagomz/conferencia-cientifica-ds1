@@ -198,3 +198,68 @@ class UsuarioConsultaSerializer(serializers.ModelSerializer):
             rol for rol in ROLES_VALIDOS
             if rol in roles_asignados
         ]
+
+
+class UsuarioActualizarSerializer(serializers.Serializer):
+    """Valida y actualiza los datos personales permitidos de un usuario."""
+
+    first_name = serializers.CharField(max_length=150, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
+    email = serializers.EmailField(required=False)
+    institucion = serializers.CharField(max_length=150, required=False)
+
+    def to_internal_value(self, data):
+        # Rechaza cualquier campo que no esté permitido para actualizar.
+        if hasattr(data, 'keys'):
+            campos_no_permitidos = (
+                set(data.keys()) - set(self.fields.keys())
+            )
+
+            if campos_no_permitidos:
+                raise serializers.ValidationError({
+                    campo: 'Este campo no está permitido para actualizar.'
+                    for campo in campos_no_permitidos
+                })
+
+        return super().to_internal_value(data)
+
+    def validate(self, datos):
+        if not datos:
+            raise serializers.ValidationError(
+                'Debe proporcionar al menos un dato para actualizar.'
+            )
+        return datos
+
+    def validate_email(self, value):
+        correo = value.strip().lower()
+
+        existe = User.objects.filter(
+            email__iexact=correo
+        ).exclude(pk=self.instance.pk).exists()
+
+        if existe:
+            raise serializers.ValidationError(
+                'Ya existe una cuenta con este correo.'
+            )
+
+        return correo
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        institucion = validated_data.pop('institucion', None)
+
+        for campo, valor in validated_data.items():
+            setattr(instance, campo, valor)
+
+        if 'email' in validated_data:
+            instance.username = validated_data['email']
+
+        instance.save()
+
+        if institucion is not None:
+            PerfilUsuario.objects.update_or_create(
+                usuario=instance,
+                defaults={'institucion': institucion}
+            )
+
+        return instance

@@ -7,7 +7,11 @@ from rest_framework.views import APIView
 from .filtros import aplicar_filtros, criterios_de_filtrado
 from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
 from .permissions import EsAdminOComite
-from .serializers import UsuarioCrearSerializer, UsuarioConsultaSerializer
+from .serializers import (
+    UsuarioCrearSerializer,
+    UsuarioConsultaSerializer,
+    UsuarioActualizarSerializer,
+)
 
 
 class UsuarioCrearView(APIView):
@@ -60,5 +64,26 @@ class UsuarioDetalleView(APIView):
 
         return Response(
             serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    def patch(self, request, pk):
+        usuario = get_object_or_404(
+            usuarios_visibles(request),
+            pk=pk
+        )
+
+        serializer = UsuarioActualizarSerializer(
+            usuario,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        usuario_actualizado = serializer.save()
+
+        respuesta = UsuarioConsultaSerializer(usuario_actualizado)
+
+        return Response(
+            respuesta.data,
             status=status.HTTP_200_OK
         )
