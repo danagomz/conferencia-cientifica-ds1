@@ -519,25 +519,32 @@ export function ConfiguracionConferencia() {
         ) : (
           <>
             <section className="mt-8 border border-line bg-panel p-5 sm:p-7">
-              <label htmlFor="conferencia-configuracion" className={etiqueta}>
-                Conferencia activa
-              </label>
-              <select
-                id="conferencia-configuracion"
-                value={idSeleccionado}
-                onChange={(evento) => cambiarConferencia(evento.target.value)}
-                disabled={cargando || guardandoPlazos || guardandoLinea}
-                className="select select-bordered mt-2 min-h-12 w-full rounded-md border border-[#A8B4BA] bg-page px-4 text-fg transition-colors hover:border-[#788C96] focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/20 sm:max-w-2xl"
-              >
-                {conferencias.map((conferencia) => (
-                  <option
-                    key={conferencia.id_conferencia}
-                    value={conferencia.id_conferencia}
-                  >
-                    {conferencia.nombre} · {conferencia.edicion}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <label
+                  htmlFor="conferencia-configuracion"
+                  className={`${etiqueta} shrink-0`}
+                >
+                  Conferencia activa
+                </label>
+
+                <select
+                  id="conferencia-configuracion"
+                  value={idSeleccionado}
+                  onChange={(evento) => cambiarConferencia(evento.target.value)}
+                  disabled={cargando || guardandoPlazos || guardandoLinea}
+                  className="select select-bordered min-h-12 w-full flex-1 rounded-md border border-[#8D9DA5] bg-page px-4 text-fg transition-colors hover:border-[#788C96] focus:border-highlight focus:outline-none focus:ring-2 focus:ring-highlight/20 sm:max-w-2xl"
+                >
+                  {conferencias.map((conferencia) => (
+                    <option
+                      key={conferencia.id_conferencia}
+                      value={conferencia.id_conferencia}
+                    >
+                      {conferencia.nombre} · {conferencia.edicion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {conferenciaSeleccionada && (
                 <p className="mt-2 text-sm text-muted">
                   La configuración se aplica únicamente a{" "}
