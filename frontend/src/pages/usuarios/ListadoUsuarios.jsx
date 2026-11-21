@@ -174,12 +174,16 @@ function inicialUsuario(usuario) {
 
 function FilaUsuario({ usuario }) {
   const roles = Array.isArray(usuario.roles) ? usuario.roles : [];
-  const nombreCompleto = [usuario.first_name, usuario.last_name]
+
+  const nombreCompleto = [
+    usuario.first_name,
+    usuario.last_name,
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className="grid gap-3 border-b border-line px-6 py-5 last:border-b-0 sm:grid-cols-[1.2fr_1.2fr_1fr_1fr] sm:items-center sm:gap-5">
+    <div className="grid gap-3 border-b border-line px-6 py-5 last:border-b-0 sm:grid-cols-[1.2fr_1.2fr_1fr_1fr_auto] sm:items-center sm:gap-5">
       <div className="flex min-w-0 items-center gap-3">
         <span
           aria-label={`Inicial de ${nombreCompleto || usuario.email}`}
@@ -192,11 +196,16 @@ function FilaUsuario({ usuario }) {
           <p className="truncate text-sm font-semibold text-fg">
             {nombreCompleto || "Nombre no registrado"}
           </p>
-          <p className="mt-1 text-xs text-muted">Usuario registrado</p>
+
+          <p className="mt-1 text-xs text-muted">
+            Usuario registrado
+          </p>
         </div>
       </div>
 
-      <p className="truncate text-sm text-muted">{usuario.email}</p>
+      <p className="truncate text-sm text-muted">
+        {usuario.email}
+      </p>
 
       <p className="truncate text-sm text-muted">
         {usuario.institucion || "Sin institución registrada"}
@@ -213,8 +222,20 @@ function FilaUsuario({ usuario }) {
             </span>
           ))
         ) : (
-          <span className="text-xs text-muted">Sin roles</span>
+          <span className="text-xs text-muted">
+            Sin roles
+          </span>
         )}
+      </div>
+
+      <div className="flex items-center">
+        <Link
+          to={`/gestion/usuarios/${usuario.id}/editar`}
+          aria-label={`Editar usuario ${nombreCompleto || usuario.email}`}
+          className="inline-flex min-h-10 items-center justify-center border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-brand hover:text-brand-fg"
+        >
+          Editar
+        </Link>
       </div>
     </div>
   );
@@ -380,12 +401,13 @@ export function ListadoUsuarios() {
 
           <div
             aria-hidden="true"
-            className="hidden grid-cols-[1.2fr_1.2fr_1fr_1fr] gap-5 border-b border-line bg-soft px-6 py-3 text-xs font-bold uppercase tracking-wide text-muted sm:grid"
+            className="hidden grid-cols-[1.2fr_1.2fr_1fr_1fr_auto] gap-5 border-b border-line bg-soft px-6 py-3 text-xs font-bold uppercase tracking-wide text-muted sm:grid"
           >
             <span>Nombre</span>
             <span>Correo electrónico</span>
             <span>Institución</span>
             <span>Roles</span>
+            <span>Acciones</span>
           </div>
 
           {cargando ? (

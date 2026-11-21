@@ -15,6 +15,7 @@ import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
 import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
+import { EditarUsuario } from "./pages/EditarUsuario";
 
 function PaginaInicioSesion() {
   const { sesion, iniciarSesion } = useAutenticacion();
@@ -87,6 +88,26 @@ function PaginaCrearUsuario() {
   return <CrearUsuario />;
 }
 
+// Cualquier usuario autenticado puede editar sus propios datos.
+function PaginaEditarPerfil() {
+  return <EditarUsuario />;
+}
+
+// La edición de otras cuentas requiere ADMIN o COMITE.
+function PaginaEditarOtroUsuario() {
+  const { sesion } = useAutenticacion();
+
+  if (!sesion.rolActivo) {
+    return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  }
+
+  if (!["ADMIN", "COMITE"].includes(sesion.rolActivo)) {
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  }
+
+  return <EditarUsuario />;
+}
+
 function PaginaUsuarios() {
   const { sesion } = useAutenticacion();
 
@@ -120,6 +141,14 @@ function Aplicacion() {
           <Route
             path="/configuracion-conferencia"
             element={<PaginaConfiguracionConferencia />}
+          />
+          <Route
+            path="/perfil/editar"
+            element={<PaginaEditarPerfil />}
+          />
+          <Route
+            path="/gestion/usuarios/:id/editar"
+            element={<PaginaEditarOtroUsuario />}
           />
           <Route
             path="/gestion/usuarios/nuevo"
