@@ -251,3 +251,37 @@ class ValidacionEdicionUsuarioTests(APITestCase):
         self.assertTrue(
             self.usuario.check_password('NuevaClaveSegura#2026')
         )
+
+    def test_consulta_individual_retorna_datos_permitidos(self):
+        r = self.client.get(
+            self.url,
+            **self.autenticar(self.usuario, 'AUTOR'),
+        )
+
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['id'], self.usuario.pk)
+        self.assertEqual(r.data['first_name'], 'Ana')
+        self.assertEqual(r.data['email'], 'ana.original@x.co')
+        self.assertEqual(r.data['institucion'], 'Universidad del Valle')
+        self.assertEqual(r.data['roles'], ['AUTOR'])
+        for campo in ('password', 'username', 'is_staff', 'is_superuser'):
+            self.assertNotIn(campo, r.data)
+
+    def test_usuario_no_consulta_detalle_de_otra_cuenta(self):
+        otro = User.objects.create_user(
+            username='otro-autor@x.co',
+            email='otro-autor@x.co',
+            password='ClaveAnterior#2026',
+        )
+        PerfilUsuario.objects.create(
+            usuario=otro,
+            institucion='Otra institución',
+        )
+        asignar_roles(otro, ['AUTOR'])
+
+        r = self.client.get(
+            f'/api/usuarios/{otro.pk}/',
+            **self.autenticar(self.usuario, 'AUTOR'),
+        )
+
+        self.assertEqual(r.status_code, 404)
