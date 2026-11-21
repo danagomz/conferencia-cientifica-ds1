@@ -253,9 +253,23 @@ export function CrearUsuario() {
             {" "}
             <Link
               to={rutaPanel}
-              className="text-sm font-semibold text-[#5D737E] underline underline-offset-4"
+              className="group inline-flex min-h-9 items-center gap-2 rounded-md px-2 -ml-2 text-sm font-semibold text-[#5D737E] transition-all duration-200 hover:bg-[#E3E7D3]/60 hover:text-[#02111B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5D737E]"
             >
-              ← Panel de{" "}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-1"
+              >
+                <path
+                  d="M10 3L5 8l5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Panel de{" "}
               {sesion.rolActivo === "ADMIN" ? "administración" : "comité"}
             </Link>
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">

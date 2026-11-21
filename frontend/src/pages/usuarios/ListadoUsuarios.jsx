@@ -304,33 +304,66 @@ export function ListadoUsuarios() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-10">
-        <nav className="mb-6 flex items-center gap-1.5 text-xs text-muted">
+        <nav className="mb-6 flex items-center gap-2 text-xs text-muted">
+          {/* Icono de carpeta */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            fill="none"
+            className="h-3.5 w-3.5 shrink-0 text-muted"
+          >
+            <path
+              d="M2 5.5A1.5 1.5 0 0 1 3.5 4h3l1.5 1.5h5A1.5 1.5 0 0 1 14.5 7v5.5A1.5 1.5 0 0 1 13 14H3.5A1.5 1.5 0 0 1 2 12.5v-7z"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+          </svg>
+
           {rutaInicioRol ? (
             <Link
               to={rutaInicioRol}
-              className="transition-colors hover:text-fg"
+              className="group inline-flex items-center rounded-md px-2 py-1 -mx-2 text-muted transition-all duration-200 hover:bg-surface-hover hover:text-fg hover:underline hover:underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               Gestión
+              {/* Flecha*/}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="ml-1 h-3 w-3 opacity-0 -translate-x-1 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+              >
+                <path
+                  d="M10 3L5 8l5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </Link>
           ) : (
             <span>Gestión</span>
           )}
 
+          {/* icono de carpeta*/}
           <svg
             aria-hidden="true"
             viewBox="0 0 16 16"
             fill="none"
-            className="h-3 w-3 text-line"
+            className="h-3 w-3 shrink-0 text-line"
           >
             <path
               d="M6 4l4 4-4 4"
               stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
 
-          <span className="font-medium text-fg">Usuarios</span>
+          {/* Ubicación actual */}
+          <span className="font-semibold text-fg">Usuarios</span>
         </nav>
 
         <section className="mb-8 flex flex-wrap items-end justify-between gap-5">
