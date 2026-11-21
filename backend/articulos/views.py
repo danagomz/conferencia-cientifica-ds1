@@ -1,3 +1,4 @@
+
 from django.db.models import Max
 from django.utils import timezone
 from rest_framework import status
@@ -16,10 +17,11 @@ from .permisos_detalle import (
 from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
-from .serializers import ArticuloCrearSerializer
 from .serializers_consulta import ArticuloListadoSerializer
 from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
+from .permisos_modificacion import PuedeModificarArticulo
+from .serializers import ArticuloCrearSerializer, ArticuloActualizarSerializer
 from .storage import subir_pdf_articulo
 from .validacion_pdf import validar_archivo_pdf
 from storage3.utils import StorageException
@@ -113,8 +115,9 @@ class ArticuloFiltrosView(APIView):
     def get(self, request):
         return Response(criterios_de_filtrado())
 
+
 class ArticulosPropiosView(APIView):
-    """GET /api/articulos/propios/ - consulta los articulos del autor autenticado."""
+    """GET /api/articulos/propios/ - consulta los artículos del autor autenticado."""
 
     permission_classes = [PuedeConsultarArticulosPropios]
 
@@ -134,6 +137,11 @@ class ArticuloDetalleView(APIView):
 
     permission_classes = [PuedeConsultarDetalleArticulo]
 
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [PuedeModificarArticulo()]
+        return super().get_permissions()
+
     def get(self, request, pk):
         # Si no existe o está deshabilitado: 404 para todos (CA-077).
         articulo = consultar_articulos().filter(pk=pk).first()
@@ -143,6 +151,28 @@ class ArticuloDetalleView(APIView):
         if not puede_ver_articulo(request.user, articulo):
             raise PermissionDenied(MENSAJE_NO_ASOCIADO)
         return Response(ArticuloDetalleSerializer(articulo).data)
+
+    def patch(self, request, pk):
+        """PATCH /api/articulos/<id>/ — actualizar datos generales (HU-012, SDGC-175)."""
+
+        articulo = consultar_articulos().filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+
+        # Verificar que el autor esté asociado al artículo.
+        self.check_object_permissions(request, articulo)
+
+        serializer = ArticuloActualizarSerializer(
+            articulo,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
 
 
 class ArticuloVersionCrearView(APIView):
