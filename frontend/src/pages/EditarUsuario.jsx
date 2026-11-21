@@ -125,6 +125,10 @@ export function EditarUsuario() {
 
   const alertaErrorRef = useRef(null);
 
+  const alertaExitoRef = useRef(null);
+
+  const [intentosCarga, establecerIntentosCarga] = useState(0);
+
   const erroresVisibles = {
     ...erroresServidor,
     ...erroresCampo,
@@ -145,6 +149,19 @@ export function EditarUsuario() {
       preventScroll: true,
     });
   }, [mensajeErrorGeneral]);
+
+  useEffect(() => {
+    if (!mensajeExito || !alertaExitoRef.current) return;
+
+    alertaExitoRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    alertaExitoRef.current.focus({
+      preventScroll: true,
+    });
+  }, [mensajeExito]);
 
   /*
    * Consulta inicial del usuario.
@@ -229,41 +246,40 @@ export function EditarUsuario() {
     rolSolicitud,
     esEdicionPropia,
     puedeGestionarRoles,
+    intentosCarga,
   ]);
 
   function actualizarCampo(evento) {
     const { name, value } = evento.target;
+    const camposRelacionados =
+      name === "contrasena"
+        ? [name, "confirmarContrasena"]
+        : [name];
 
     establecerFormulario((actual) => ({
       ...actual,
       [name]: value,
     }));
 
-    establecerErroresCampo((actuales) => {
-      const nuevosErrores = { ...actuales };
-
-      delete nuevosErrores[name];
-
-      if (name === "contrasena") {
-        delete nuevosErrores.confirmarContrasena;
-      }
-
-      return nuevosErrores;
+    const erroresCampoActualizados = { ...erroresCampo };
+    const erroresServidorActualizados = { ...erroresServidor };
+    camposRelacionados.forEach((campo) => {
+      delete erroresCampoActualizados[campo];
+      delete erroresServidorActualizados[campo];
     });
 
-    establecerErroresServidor((actuales) => {
-      const nuevosErrores = { ...actuales };
+    establecerErroresCampo(erroresCampoActualizados);
+    establecerErroresServidor(erroresServidorActualizados);
 
-      delete nuevosErrores[name];
-
-      if (name === "contrasena") {
-        delete nuevosErrores.confirmarContrasena;
-      }
-
-      return nuevosErrores;
-    });
-
-    establecerMensajeErrorGeneral("");
+    const erroresRestantes = {
+      ...erroresServidorActualizados,
+      ...erroresCampoActualizados,
+    };
+    establecerMensajeErrorGeneral(
+      Object.keys(erroresRestantes).length > 0
+        ? "Revisa los campos indicados antes de actualizar la cuenta."
+        : "",
+    );
     establecerMensajeExito("");
   }
 
@@ -290,6 +306,16 @@ export function EditarUsuario() {
 
       return nuevosErrores;
     });
+
+    const hayOtrosErrores = Object.keys(erroresVisibles).some(
+      (campoVisible) =>
+        campoVisible !== campo && Boolean(erroresVisibles[campoVisible]),
+    );
+    establecerMensajeErrorGeneral(
+      errores[campo] || hayOtrosErrores
+        ? "Revisa los campos indicados antes de actualizar la cuenta."
+        : "",
+    );
   }
 
   function alternarRol(codigo) {
@@ -317,7 +343,15 @@ export function EditarUsuario() {
       return nuevosErrores;
     });
 
-    establecerMensajeErrorGeneral("");
+    const quedanErrores = Object.keys(erroresVisibles).some(
+      (campo) => campo !== "roles" && Boolean(erroresVisibles[campo]),
+    );
+    establecerMensajeErrorGeneral(
+      quedanErrores
+        ? "Revisa los campos indicados antes de actualizar la cuenta."
+        : "",
+    );
+    establecerMensajeExito("");
   }
 
   async function enviarFormulario(evento) {
@@ -554,9 +588,11 @@ export function EditarUsuario() {
 
             {mensajeExito && (
               <div
+                ref={alertaExitoRef}
+                tabIndex={-1}
                 role="status"
                 aria-live="polite"
-                className="mt-6 flex items-start justify-between gap-4 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-950"
+                className="mt-6 flex items-start justify-between gap-4 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 outline-none focus:ring-2 focus:ring-emerald-700/30"
               >
                 <p>{mensajeExito}</p>
 
@@ -637,6 +673,16 @@ export function EditarUsuario() {
                 >
                   Volver
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    establecerIntentosCarga((actual) => actual + 1)
+                  }
+                  className="ml-3 mt-5 inline-flex min-h-11 items-center border border-[#5D737E] px-5 text-sm font-semibold transition hover:bg-[#E3E7D3]"
+                >
+                  Reintentar
+                </button>
               </div>
             ) : (
               <form
