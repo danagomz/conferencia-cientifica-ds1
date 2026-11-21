@@ -1,14 +1,19 @@
-﻿from types import SimpleNamespace
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from .storage import obtener_bucket, subir_pdf_articulo
 
 
 class StorageArticuloTests(SimpleTestCase):
 
+    @override_settings(
+        SUPABASE_URL='https://proyecto.supabase.co',
+        SUPABASE_SECRET_KEY='clave-de-prueba',
+        SUPABASE_BUCKET='articulos-pdf',
+    )
     @patch('articulos.storage.create_client')
     def test_obtener_bucket_usa_configuracion_supabase(self, crear_cliente):
         bucket_esperado = MagicMock()
