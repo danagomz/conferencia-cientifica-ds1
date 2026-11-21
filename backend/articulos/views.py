@@ -137,3 +137,17 @@ class ArticuloDetalleView(APIView):
         if not puede_ver_articulo(request.user, articulo):
             raise PermissionDenied(MENSAJE_NO_ASOCIADO)
         return Response(ArticuloDetalleSerializer(articulo).data)
+
+    def patch(self, request, pk):
+        """PATCH /api/articulos/<id>/ — actualizar datos generales (HU-012, SDGC-175)."""
+
+        articulo = consultar_articulos().filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+
+        # SDGC-178: integrar aquí el permiso específico de modificación.
+        # Mientras no esté integrado, se bloquea la modificación por seguridad.
+        raise PermissionDenied(
+            'La modificación requiere integrar primero el permiso de SDGC-178.'
+        )
