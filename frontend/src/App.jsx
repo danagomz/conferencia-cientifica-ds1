@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { ProveedorAutenticacion } from "./autenticacion/ProveedorAutenticacion";
 import { useAutenticacion } from "./autenticacion/useAutenticacion";
@@ -14,7 +15,15 @@ import { ConfiguracionConferencia } from "./pages/ConfiguracionConferencia";
 import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
+import { VersionesArticulo } from "./pages/articulos/VersionesArticulo";
+import { EditarArticulo } from "./pages/articulos/EditarArticulo";
 import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
+
+const EditarUsuario = lazy(() =>
+  import("./pages/EditarUsuario").then(({ EditarUsuario: pagina }) => ({
+    default: pagina,
+  })),
+);
 
 function PaginaInicioSesion() {
   const { sesion, iniciarSesion } = useAutenticacion();
@@ -61,6 +70,22 @@ function PaginaMisArticulos() {
   return <ListadoArticulos modo="propios" />;
 }
 
+function PaginaVersionesArticulo() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (sesion.rolActivo !== "AUTOR")
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <VersionesArticulo />;
+}
+
+function PaginaEditarArticulo() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (sesion.rolActivo !== "AUTOR")
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <EditarArticulo />;
+}
+
 function PaginaRegistroArticulo() {
   const { sesion } = useAutenticacion();
   if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
@@ -87,6 +112,26 @@ function PaginaCrearUsuario() {
   return <CrearUsuario />;
 }
 
+// Cualquier usuario autenticado puede editar sus propios datos.
+function PaginaEditarPerfil() {
+  return <EditarUsuario />;
+}
+
+// La edición de otras cuentas requiere ADMIN o COMITE.
+function PaginaEditarOtroUsuario() {
+  const { sesion } = useAutenticacion();
+
+  if (!sesion.rolActivo) {
+    return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  }
+
+  if (!["ADMIN", "COMITE"].includes(sesion.rolActivo)) {
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  }
+
+  return <EditarUsuario />;
+}
+
 function PaginaUsuarios() {
   const { sesion } = useAutenticacion();
 
@@ -107,38 +152,62 @@ function RedireccionInicial() {
 function Aplicacion() {
   return (
     <ProveedorAutenticacion>
-      <Routes>
-        <Route path="/login" element={<PaginaInicioSesion />} />
-        <Route path="/registro-autor" element={<RegistroAutor />} />
+      <Suspense
+        fallback={
+          <div role="status" aria-live="polite" className="p-8 text-center">
+            Cargando pantalla...
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/login" element={<PaginaInicioSesion />} />
+          <Route path="/registro-autor" element={<RegistroAutor />} />
 
-        <Route element={<RequiereSesion />}>
-          <Route path={RUTA_ELEGIR_ROL} element={<PaginaSeleccionRol />} />
-          <Route
-            path="/autor/articulos/nuevo"
-            element={<PaginaRegistroArticulo />}
-          />
-          <Route
-            path="/configuracion-conferencia"
-            element={<PaginaConfiguracionConferencia />}
-          />
-          <Route
-            path="/gestion/usuarios/nuevo"
-            element={<PaginaCrearUsuario />}
-          />
-          <Route path="/gestion/usuarios" element={<PaginaUsuarios />} />
-          <Route path="/gestion/articulos" element={<PaginaArticulos />} />
-          <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
-          {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
+          <Route element={<RequiereSesion />}>
+            <Route path={RUTA_ELEGIR_ROL} element={<PaginaSeleccionRol />} />
             <Route
-              key={rol}
-              path={informacion.rutaInicio}
-              element={<PaginaSoloRol rol={rol} />}
+              path="/autor/articulos/nuevo"
+              element={<PaginaRegistroArticulo />}
             />
-          ))}
-        </Route>
+            <Route
+              path="/configuracion-conferencia"
+              element={<PaginaConfiguracionConferencia />}
+            />
+            <Route
+              path="/perfil/editar"
+              element={<PaginaEditarPerfil />}
+            />
+            <Route
+              path="/gestion/usuarios/:id/editar"
+              element={<PaginaEditarOtroUsuario />}
+            />
+            <Route
+              path="/gestion/usuarios/nuevo"
+              element={<PaginaCrearUsuario />}
+            />
+            <Route path="/gestion/usuarios" element={<PaginaUsuarios />} />
+            <Route path="/gestion/articulos" element={<PaginaArticulos />} />
+            <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
+            <Route
+              path="/autor/articulos/:id/versiones"
+              element={<PaginaVersionesArticulo />}
+            />
+            <Route
+              path="/autor/articulos/:id/editar"
+              element={<PaginaEditarArticulo />}
+            />
+            {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
+              <Route
+                key={rol}
+                path={informacion.rutaInicio}
+                element={<PaginaSoloRol rol={rol} />}
+              />
+            ))}
+          </Route>
 
-        <Route path="*" element={<RedireccionInicial />} />
-      </Routes>
+          <Route path="*" element={<RedireccionInicial />} />
+        </Routes>
+      </Suspense>
     </ProveedorAutenticacion>
   );
 }

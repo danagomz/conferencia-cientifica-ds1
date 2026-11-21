@@ -1,12 +1,16 @@
+
+from django.db.models import Max
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
 from .filtros import aplicar_filtros, criterios_de_filtrado
+from .models import Articulo, AutorArticulo, VersionArticulo
 from .permisos_detalle import (
     MENSAJE_NO_DISPONIBLE, MENSAJE_NO_ASOCIADO, PuedeConsultarDetalleArticulo, puede_ver_articulo,
 )
@@ -18,6 +22,9 @@ from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 from .permisos_modificacion import PuedeModificarArticulo
 from .serializers import ArticuloCrearSerializer, ArticuloActualizarSerializer
+from .storage import subir_pdf_articulo
+from .validacion_pdf import validar_archivo_pdf
+from storage3.utils import StorageException
 
 MENSAJE_SIN_RESULTADOS = 'No se encontraron artículos que coincidan con la consulta.'
 
@@ -108,8 +115,9 @@ class ArticuloFiltrosView(APIView):
     def get(self, request):
         return Response(criterios_de_filtrado())
 
+
 class ArticulosPropiosView(APIView):
-    """GET /api/articulos/propios/ - consulta los articulos del autor autenticado."""
+    """GET /api/articulos/propios/ - consulta los artículos del autor autenticado."""
 
     permission_classes = [PuedeConsultarArticulosPropios]
 
@@ -165,3 +173,84 @@ class ArticuloDetalleView(APIView):
         serializer.save()
 
         return Response(serializer.data)
+
+
+class ArticuloVersionCrearView(APIView):
+    """POST /api/articulos/<id>/versiones/ - carga una versión del artículo."""
+
+    permission_classes = [EsAutor]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, pk):
+        articulo = Articulo.objects.filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound('El artículo no existe.')
+
+        es_responsable = AutorArticulo.objects.filter(
+            id_articulo=articulo,
+            id_usuario=request.user,
+            es_responsable=True,
+        ).exists()
+
+        if not es_responsable:
+            raise PermissionDenied(
+                'Solo el autor responsable puede cargar versiones del artículo.'
+            )
+
+        archivo = request.FILES.get('archivo')
+
+        if archivo is None:
+            return Response(
+                {'mensaje': 'Debe seleccionar un archivo.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # SDGC-200: formato y características permitidas del PDF.
+        validar_archivo_pdf(archivo)
+
+        ultima_version = VersionArticulo.objects.filter(
+            id_articulo=articulo
+        ).aggregate(maximo=Max('numero_version'))['maximo']
+
+        numero_version = (ultima_version or 0) + 1
+        tipo_version = 'ORIGINAL' if numero_version == 1 else 'CORREGIDA'
+        if numero_version == 1:
+            ArticuloCrearSerializer._validar_plazo_postulacion(
+                articulo.id_conferencia
+            )
+
+        try:
+            ruta = subir_pdf_articulo(
+                articulo.id_articulo,
+                numero_version,
+                archivo.read(),
+            )
+        except StorageException:
+            return Response(
+                {
+                    'mensaje': 'No fue posible almacenar el archivo. Inténtelo nuevamente.'
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        version = VersionArticulo.objects.create(
+            id_articulo=articulo,
+            numero_version=numero_version,
+            tipo_version=tipo_version,
+            archivo_pdf_path=ruta,
+            nombre_archivo=archivo.name,
+            tamano_bytes=archivo.size,
+            id_usuario_carga=request.user,
+        )
+
+        return Response(
+            {
+                'mensaje': 'La versión del artículo se cargó correctamente.',
+                'id_version': version.id_version,
+                'numero_version': version.numero_version,
+                'tipo_version': version.tipo_version,
+                'nombre_archivo': version.nombre_archivo,
+            },
+            status=status.HTTP_201_CREATED,
+        )
