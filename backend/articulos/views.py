@@ -14,6 +14,9 @@ from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
+from .asignaciones import asociar_evaluadores
+from .serializers_asignaciones import AsignarEvaluadoresSerializer
+from usuarios.permissions import EsAdminOComite
 from .serializers_consulta import ArticuloListadoSerializer
 from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
@@ -137,3 +140,40 @@ class ArticuloDetalleView(APIView):
         if not puede_ver_articulo(request.user, articulo):
             raise PermissionDenied(MENSAJE_NO_ASOCIADO)
         return Response(ArticuloDetalleSerializer(articulo).data)
+
+class AsignarEvaluadoresView(APIView):
+    """POST /api/articulos/<id>/evaluadores/ - registra evaluadores (SDGC-199)."""
+
+    permission_classes = [EsAdminOComite]
+
+    def post(self, request, pk):
+        articulo = consultar_articulos().filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+
+        serializer = AsignarEvaluadoresSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        evaluadores = serializer.validated_data['evaluadores']
+
+        asignaciones = asociar_evaluadores(
+            articulo,
+            evaluadores,
+            request.user,
+        )
+
+        return Response(
+            {
+                'mensaje': 'Evaluadores asignados correctamente.',
+                'articulo': articulo.pk,
+                'evaluadores': [
+                    {
+                        'id_asignacion': asignacion.id_asignacion,
+                        'id_evaluador': asignacion.id_evaluador_id,
+                    }
+                    for asignacion in asignaciones
+                ],
+            },
+            status=status.HTTP_201_CREATED,
+        )
