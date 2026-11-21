@@ -1,125 +1,252 @@
+import { useEffect, useState } from "react";
 import { useAutenticacion } from "../autenticacion/useAutenticacion";
 import { ROLES_DISPONIBLES, RUTA_ELEGIR_ROL } from "../autenticacion/roles";
 import { Link, useNavigate } from "react-router-dom";
 import { Marca } from "../components/Marca";
 
-// Pantalla de inicio de cada rol (destino de la redirección, CA-039).
-// Por ahora es un esqueleto: cada historia de usuario irá agregando sus pantallas aquí.
+// Pantalla de inicio de cada rol.
 export function InicioRol({ rol }) {
   const navegar = useNavigate();
   const { sesion, cerrarSesion } = useAutenticacion();
   const informacion = ROLES_DISPONIBLES[rol];
   const variosRoles = sesion.roles.length > 1;
 
+  const [barraAbierta, establecerBarraAbierta] = useState(true);
+
+  useEffect(() => {
+    function cerrarConEscape(evento) {
+      if (evento.key === "Escape") {
+        establecerBarraAbierta(false);
+      }
+    }
+
+    document.addEventListener("keydown", cerrarConEscape);
+
+    return () => {
+      document.removeEventListener("keydown", cerrarConEscape);
+    };
+  }, []);
+
+  const opcionesAutor = [
+    {
+      texto: "Registrar un artículo",
+      ruta: "/autor/articulos/nuevo",
+    },
+    {
+      texto: "Mis artículos",
+      ruta: "/autor/articulos",
+    },
+  ];
+
+  const opcionesAdministracion = [
+    {
+      texto: "Consultar artículos",
+      ruta: "/gestion/articulos",
+    },
+    {
+      texto: "Consultar usuarios",
+      ruta: "/gestion/usuarios",
+    },
+    {
+      texto: "Crear usuario",
+      ruta: "/gestion/usuarios/nuevo",
+    },
+    {
+      texto: "Configurar fechas y líneas temáticas",
+      ruta: "/configuracion-conferencia",
+    },
+  ];
+
+  const opciones = rol === "AUTOR" ? opcionesAutor : opcionesAdministracion;
+
+  const tarjetasDashboard =
+    rol === "AUTOR"
+      ? ["Mis artículos", "Artículos en revisión", "Próximas fechas"]
+      : [
+          "Artículos postulados",
+          "Usuarios registrados",
+          "Revisiones pendientes",
+        ];
+
   return (
-    <div className="min-h-dvh bg-page font-sans text-fg">
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <Marca compacta />
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <span className="text-muted">
-              {sesion.usuario.nombre} ·{" "}
-              <strong className="font-semibold text-fg">
-                {informacion.nombre}
-              </strong>
-            </span>
-            {variosRoles && (
+    <div className="flex min-h-dvh overflow-x-hidden bg-page font-sans text-fg">
+      {barraAbierta && (
+        <button
+          type="button"
+          aria-label="Cerrar barra lateral"
+          onClick={() => establecerBarraAbierta(false)}
+          className="fixed inset-0 z-40 bg-[#02111B]/30 lg:hidden"
+        />
+      )}
+
+      {barraAbierta && (
+        <aside className="fixed inset-y-0 left-0 z-50 w-[82vw] max-w-72 border-r border-line bg-panel shadow-xl lg:sticky lg:top-0 lg:h-dvh lg:w-72 lg:max-w-none lg:shadow-none">
+          <div className="flex h-full flex-col">
+            <div className="flex min-h-20 items-center justify-between border-b border-line px-5">
+              <Marca compacta />
+
               <button
                 type="button"
-                onClick={() => navegar(RUTA_ELEGIR_ROL)}
-                className="font-semibold underline underline-offset-4 hover:text-highlight"
+                onClick={() => establecerBarraAbierta(false)}
+                aria-label="Cerrar barra lateral"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted transition hover:bg-soft hover:text-fg lg:hidden"
               >
-                Cambiar de rol
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-5 w-5"
+                >
+                  <path
+                    d="M6 6l12 12M18 6 6 18"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={cerrarSesion}
-              className="font-semibold underline underline-offset-4 hover:text-highlight"
+            </div>
+
+            <nav
+              aria-label="Navegación principal"
+              className="flex-1 space-y-2 overflow-y-auto px-3 py-5"
             >
-              Cerrar sesión
-            </button>
+              {opciones.map((opcion) => (
+                <Link
+                  key={opcion.ruta}
+                  to={opcion.ruta}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      establecerBarraAbierta(false);
+                    }
+                  }}
+                  className="flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold text-fg transition-colors hover:bg-[#E6E49F]/35 hover:text-brand"
+                >
+                  {opcion.texto}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </div>
-      </header>
+        </aside>
+      )}
 
-      <main className="mx-auto max-w-5xl px-6 py-12 motion-safe:animate-rise">
-        <h1 className="font-display text-4xl font-extrabold tracking-tight">
-          Panel de {informacion.nombre.toLowerCase()}
-        </h1>
-        <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
-        <p className="mt-3 max-w-prose text-muted">{informacion.descripcion}</p>
+      <div className="min-w-0 flex-1">
+        <header className="border-b border-line bg-panel">
+          <div className="flex min-h-20 items-center justify-between gap-4 px-5 sm:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => establecerBarraAbierta((abierta) => !abierta)}
+                aria-label={
+                  barraAbierta ? "Cerrar barra lateral" : "Abrir barra lateral"
+                }
+                aria-expanded={barraAbierta}
+                className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-fg transition-colors hover:bg-[#E6E49F]/35 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/40"
+              >
+                {barraAbierta ? (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-5 w-5 transition-transform group-hover:scale-105"
+                  >
+                    <path
+                      d="M5 5l14 14M19 5 5 19"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-5 w-5"
+                  >
+                    <path
+                      d="M4 6h16M4 12h16M4 18h16"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </button>
 
-        {rol === "AUTOR" && (
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              to="/autor/articulos/nuevo"
-              className="inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
-            >
-              Registrar un artículo
-            </Link>
-            <Link
-              to="/autor/articulos"
-              className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
-            >
-              Mis artículos
-            </Link>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-fg">
+                  {sesion.usuario.nombre}
+                </p>
+
+                <p className="text-xs text-muted">{informacion.nombre}</p>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-4 text-sm">
+              {variosRoles && (
+                <button
+                  type="button"
+                  onClick={() => navegar(RUTA_ELEGIR_ROL)}
+                  className="hidden font-semibold underline underline-offset-4 hover:text-highlight sm:inline"
+                >
+                  Cambiar de rol
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={cerrarSesion}
+                className="rounded-lg border border-line px-3 py-2 font-semibold transition hover:border-highlight hover:bg-[#E6E49F]/35"
+              >
+                Cerrar sesión
+              </button>
+            </div>
           </div>
-        )}
-        {["ADMIN", "COMITE"].includes(rol) && (
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              to="/gestion/articulos"
-              className="inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
-            >
-              Consultar artículos
-            </Link>
+        </header>
 
-            <Link
-              to="/configuracion-conferencia"
-              className="inline-flex min-h-12 items-center justify-center border border-brand bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
-            >
-              Configurar fechas y líneas temáticas
-            </Link>
+        <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
+          <section>
+            <p className="text-xs font-bold uppercase tracking-widest text-brand">
+              {informacion.nombre}
+            </p>
 
-            <Link
-              to="/gestion/usuarios"
-              className="inline-flex min-h-12 items-center justify-center bg-brand px-6 font-semibold text-brand-fg transition hover:bg-brand-hover"
-            >
-              Consultar usuarios
-            </Link>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand">
+              Panel de {informacion.nombre.toLowerCase()}
+            </h1>
 
-            <Link
-              to="/gestion/usuarios/nuevo"
-              className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
-            >
-              Crear usuario
-            </Link>
-          </div>
-        )}
+            <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
 
-        <h2 className="mt-10 font-display text-xl font-bold">
-          Disponible para este rol
-        </h2>
-        <ul className="mt-3 max-w-prose divide-y divide-line border-y border-line">
-          {informacion.funciones.map((funcion) => (
-            <li
-              key={funcion}
-              className="flex items-center justify-between gap-4 py-3"
-            >
-              <span>{funcion}</span>
-              <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">
-                {rol === "AUTOR" ||
-                (["ADMIN", "COMITE"].includes(rol) &&
-                  (funcion === "Configurar fechas límite y líneas temáticas" ||
-                    funcion.startsWith("Crear usuarios")))
-                  ? "Disponible"
-                  : "Próximamente"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </main>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+              {informacion.descripcion}
+            </p>
+          </section>
+
+          <section aria-labelledby="titulo-resumen" className="mt-10">
+            <h2 id="titulo-resumen" className="text-xl font-bold text-fg">
+              Resumen
+            </h2>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {tarjetasDashboard.map((titulo) => (
+                <article
+                  key={titulo}
+                  aria-label={titulo}
+                  className="min-h-36 border border-line bg-panel p-5 shadow-sm"
+                >
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                    {titulo}
+                  </p>
+
+                  <div className="mt-6 h-8 w-16 animate-pulse rounded bg-soft" />
+
+                  <p className="mt-5 text-xs text-muted">Indicador pendiente</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }
