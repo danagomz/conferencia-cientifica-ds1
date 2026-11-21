@@ -48,9 +48,7 @@ export function InicioRol({ rol }) {
           Panel de {informacion.nombre.toLowerCase()}
         </h1>
         <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
-        <p className="mt-3 max-w-prose text-muted">
-          {informacion.descripcion}
-        </p>
+        <p className="mt-3 max-w-prose text-muted">{informacion.descripcion}</p>
 
         {/* Enlace para actualizar los datos personales de la cuenta */}
         <Link
@@ -58,8 +56,8 @@ export function InicioRol({ rol }) {
           className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
         >
           Actualizar mis datos
-        </Link> 
-         
+        </Link>
+
         {rol === "AUTOR" && (
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
@@ -106,6 +104,15 @@ export function InicioRol({ rol }) {
               Crear usuario
             </Link>
           </div>
+        )}
+
+        {rol === "COMITE" && (
+          <Link
+            to="/gestion/evaluadores/asignar"
+            className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+          >
+            Asignar evaluadores
+          </Link>
         )}
 
         <h2 className="mt-10 font-display text-xl font-bold">
