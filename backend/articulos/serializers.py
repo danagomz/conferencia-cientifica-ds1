@@ -163,3 +163,21 @@ class ArticuloCrearSerializer(serializers.ModelSerializer):
                     es_responsable=c['es_responsable'],
                 )
         return articulo
+
+
+class ArticuloActualizarSerializer(serializers.ModelSerializer):
+    """Actualiza los datos generales de un artículo (HU-012, SDGC-175)."""
+
+    id_linea = serializers.PrimaryKeyRelatedField(
+        queryset=LineaTematica.objects.all(),
+        required=False,
+    )
+
+    class Meta:
+        model = Articulo
+        fields = [
+            'titulo',
+            'resumen',
+            'palabras_clave',
+            'id_linea',
+        ]
