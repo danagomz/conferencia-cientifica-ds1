@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 
 from .filtros import aplicar_filtros, criterios_de_filtrado
 from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
+from .permisos_edicion import PuedeEditarUsuario
 from .permissions import EsAdminOComite
 from .serializers import (
     UsuarioCrearSerializer,
@@ -48,7 +49,11 @@ class UsuarioDetalleView(APIView):
     Actualiza un usuario según los permisos y el rol activo.
     """
 
-    permission_classes = [PuedeConsultarUsuarios]
+    def get_permissions(self):
+        # SDGC-86: la edición tiene su propio control de permisos.
+        if self.request.method == 'PATCH':
+            return [PuedeEditarUsuario()]
+        return [PuedeConsultarUsuarios()]
 
     def obtener_usuario_visible(self, request, pk):
         """
@@ -72,6 +77,7 @@ class UsuarioDetalleView(APIView):
 
     def patch(self, request, pk):
         usuario = self.obtener_usuario_visible(request, pk)
+        self.check_object_permissions(request, usuario)
 
         serializer = UsuarioEditarSerializer(
             usuario,
