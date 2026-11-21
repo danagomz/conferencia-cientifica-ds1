@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from .filtros import aplicar_filtros, criterios_de_filtrado
 from .permisos_consulta import PuedeConsultarUsuarios, usuarios_visibles
+from .permisos_edicion import PuedeEditarUsuario
 from .permissions import EsAdminOComite
 from .serializers import (
     UsuarioCrearSerializer,
@@ -50,9 +51,13 @@ class UsuarioFiltrosView(APIView):
 
 
 class UsuarioDetalleView(APIView):
-    """GET /api/usuarios/<id>/ — consulta los datos de un usuario."""
+    """/api/usuarios/<id>/ — GET consulta (SDGC-83) y PATCH actualiza (SDGC-84) los datos de un usuario."""
 
-    permission_classes = [PuedeConsultarUsuarios]
+    def get_permissions(self):
+        # SDGC-86: la edición tiene su propio control de permisos.
+        if self.request.method == 'PATCH':
+            return [PuedeEditarUsuario()]
+        return [PuedeConsultarUsuarios()]
 
     def get(self, request, pk):
         usuario = get_object_or_404(
@@ -72,6 +77,8 @@ class UsuarioDetalleView(APIView):
             usuarios_visibles(request),
             pk=pk
         )
+
+        self.check_object_permissions(request, usuario)
 
         serializer = UsuarioActualizarSerializer(
             usuario,
