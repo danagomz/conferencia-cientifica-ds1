@@ -78,26 +78,72 @@ function IconoPdf() {
   );
 }
 
-function AlertaExito({ mensaje }) {
-  return (
-    <p
-      role="status"
-      aria-live="polite"
-      className="mt-4 border border-l-4 border-emerald-200 border-l-emerald-600 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
-    >
-      {mensaje}
-    </p>
-  );
-}
+// Mensaje de resultado de la carga (CA-097 éxito · CA-098 error).
+// Al aparecer se desplaza a la vista y recibe el foco para que el autor
+// siempre lo note. Solo existe una notificación a la vez.
+function Notificacion({ tipo, mensaje, alCerrar }) {
+  const referencia = useRef(null);
+  const esError = tipo === "error";
 
-function AlertaError({ mensaje }) {
+  useEffect(() => {
+    const elemento = referencia.current;
+    if (!elemento) return;
+    const reducirMovimiento = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    elemento.scrollIntoView({
+      behavior: reducirMovimiento ? "auto" : "smooth",
+      block: "center",
+    });
+    elemento.focus({ preventScroll: true });
+  }, []);
+
   return (
-    <p
-      role="alert"
-      className="mt-4 border border-l-4 border-red-200 border-l-red-700 bg-red-50 px-4 py-3 text-sm font-medium text-red-900"
+    <div
+      ref={referencia}
+      tabIndex={-1}
+      role={esError ? "alert" : "status"}
+      aria-live={esError ? "assertive" : "polite"}
+      aria-atomic="true"
+      className={`mt-4 flex items-start gap-3 border border-l-4 px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-highlight ${
+        esError
+          ? "border-red-200 border-l-red-700 bg-red-50 text-red-900"
+          : "border-emerald-200 border-l-emerald-600 bg-emerald-50 text-emerald-900"
+      }`}
     >
-      {mensaje}
-    </p>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="mt-0.5 h-5 w-5 shrink-0"
+      >
+        {esError ? (
+          <path d="M12 8v5m0 3.5v.01M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z" />
+        ) : (
+          <path d="M5 12.5 10 17.5 19 7.5" />
+        )}
+      </svg>
+
+      <div className="min-w-0 flex-1">
+        <p className="font-bold">
+          {esError ? "No se pudo cargar la versión" : "Versión cargada"}
+        </p>
+        <p className="mt-0.5 font-medium">{mensaje}</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={alCerrar}
+        aria-label="Cerrar mensaje"
+        className="-mr-1 grid h-7 w-7 shrink-0 place-items-center rounded-full text-lg leading-none transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -136,7 +182,6 @@ function AvisoPlazo({ plazo, cargaBloqueada }) {
 
 function FormularioCarga({
   archivo,
-  errorArchivo,
   cargando,
   deshabilitado,
   motivoDeshabilitado,
@@ -162,7 +207,6 @@ function FormularioCarga({
         disabled={deshabilitado || cargando}
         onChange={alSeleccionar}
         aria-describedby="ayuda-archivo-version"
-        aria-invalid={errorArchivo ? "true" : undefined}
         className="file-input file-input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel text-sm text-fg focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25 disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:opacity-60"
       />
 
@@ -170,12 +214,6 @@ function FormularioCarga({
         {motivoDeshabilitado ||
           "Solo se admiten archivos en formato PDF. Las versiones anteriores se conservan."}
       </p>
-
-      {errorArchivo && (
-        <p role="alert" className="mt-2 text-sm font-medium text-red-700">
-          {errorArchivo}
-        </p>
-      )}
 
       {archivo && (
         <div className="mt-4 flex items-center gap-3 border border-line bg-soft/40 px-4 py-3">
@@ -204,7 +242,7 @@ function FormularioCarga({
 
       <button
         type="submit"
-        disabled={deshabilitado || cargando || !archivo}
+        disabled={deshabilitado || cargando}
         className="btn mt-5 min-h-12 rounded-none border-2 border-brand bg-brand px-6 text-sm font-bold text-brand-fg shadow-sm transition hover:border-brand-hover hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-70"
       >
         {cargando && (
@@ -320,6 +358,8 @@ export function VersionesArticulo() {
     : null;
 
   const entradaArchivo = useRef(null);
+  const hayArticuloRef = useRef(false);
+  const contadorNotificaciones = useRef(0);
 
   const [articulo, setArticulo] = useState(null);
   const [plazo, setPlazo] = useState(null);
@@ -328,10 +368,9 @@ export function VersionesArticulo() {
   const [intento, setIntento] = useState(0);
 
   const [archivo, setArchivo] = useState(null);
-  const [errorArchivo, setErrorArchivo] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [mensajeExito, setMensajeExito] = useState("");
-  const [mensajeError, setMensajeError] = useState("");
+  // Una sola notificación a la vez: { id, tipo: "exito" | "error", mensaje }.
+  const [notificacion, setNotificacion] = useState(null);
 
   useEffect(() => {
     let activo = true;
@@ -345,17 +384,27 @@ export function VersionesArticulo() {
         ).catch(() => null);
 
         if (!activo) return;
+        hayArticuloRef.current = true;
         setArticulo(datos);
         setPlazo(plazoConferencia);
         setErrorDatos("");
       })
       .catch((error) => {
         if (!activo) return;
-        setErrorDatos(
+        const mensaje =
           error instanceof Error
             ? error.message
-            : "No se pudo cargar el artículo. Intenta de nuevo.",
-        );
+            : "No se pudo cargar el artículo. Intenta de nuevo.";
+
+        if (hayArticuloRef.current) {
+          // Refresco tras una carga: se conserva la vista y se avisa del fallo.
+          notificar(
+            "error",
+            `La versión se cargó, pero no se pudo actualizar el historial. ${mensaje}`,
+          );
+        } else {
+          setErrorDatos(mensaje);
+        }
       })
       .finally(() => {
         if (activo) setCargandoDatos(false);
@@ -372,17 +421,30 @@ export function VersionesArticulo() {
     setIntento((n) => n + 1);
   }
 
+  function notificar(tipo, mensaje) {
+    contadorNotificaciones.current += 1;
+    setNotificacion({ id: contadorNotificaciones.current, tipo, mensaje });
+  }
+
+  function cerrarNotificacion() {
+    setNotificacion(null);
+  }
+
   function limpiarArchivo() {
     setArchivo(null);
-    setErrorArchivo("");
     if (entradaArchivo.current) entradaArchivo.current.value = "";
+  }
+
+  function rechazarArchivo(evento, mensaje) {
+    setArchivo(null);
+    evento.target.value = "";
+    notificar("error", mensaje);
   }
 
   function seleccionarArchivo(evento) {
     const elegido = evento.target.files?.[0] ?? null;
-    setMensajeExito("");
-    setMensajeError("");
-    setErrorArchivo("");
+    // Al elegir otro archivo se descarta cualquier mensaje anterior.
+    setNotificacion(null);
 
     if (!elegido) {
       setArchivo(null);
@@ -390,16 +452,18 @@ export function VersionesArticulo() {
     }
 
     if (!esArchivoPdf(elegido)) {
-      setArchivo(null);
-      setErrorArchivo("El archivo debe estar en formato PDF.");
-      evento.target.value = "";
+      rechazarArchivo(
+        evento,
+        `El archivo "${elegido.name}" no es un PDF. Seleccione un archivo con extensión .pdf.`,
+      );
       return;
     }
 
     if (elegido.size === 0) {
-      setArchivo(null);
-      setErrorArchivo("El archivo seleccionado está vacío.");
-      evento.target.value = "";
+      rechazarArchivo(
+        evento,
+        `El archivo "${elegido.name}" está vacío. Seleccione un PDF con contenido.`,
+      );
       return;
     }
 
@@ -408,25 +472,41 @@ export function VersionesArticulo() {
 
   async function enviarVersion(evento) {
     evento.preventDefault();
-    if (!archivo || enviando) return;
+    if (enviando) return;
+
+    // Cada intento parte sin alertas previas.
+    setNotificacion(null);
+
+    if (!archivo) {
+      notificar(
+        "error",
+        "No ha seleccionado ningún archivo. Elija el PDF de la nueva versión antes de cargarla.",
+      );
+      return;
+    }
 
     setEnviando(true);
-    setMensajeExito("");
-    setMensajeError("");
 
     try {
       const respuesta = await cargarVersionArticulo(token, id, archivo);
-      setMensajeExito(
-        respuesta?.mensaje ||
-          `La versión ${respuesta?.numero_version ?? ""} del artículo se cargó correctamente.`,
+      const numero = respuesta?.numero_version;
+      const nombre = respuesta?.nombre_archivo || archivo.name;
+
+      notificar(
+        "exito",
+        numero
+          ? `La versión ${numero} del artículo se cargó correctamente (archivo: ${nombre}). Es ahora la versión actual.`
+          : `La nueva versión del artículo se cargó correctamente (archivo: ${nombre}).`,
       );
       limpiarArchivo();
-      reintentar();
+      // Refresca el historial sin reemplazar la pantalla por el esqueleto.
+      setIntento((n) => n + 1);
     } catch (error) {
-      setMensajeError(
+      notificar(
+        "error",
         error instanceof Error
           ? error.message
-          : "No fue posible cargar la versión. Intenta de nuevo.",
+          : "No fue posible cargar la versión. Intente de nuevo.",
       );
     } finally {
       setEnviando(false);
@@ -587,7 +667,6 @@ export function VersionesArticulo() {
 
                 <FormularioCarga
                   archivo={archivo}
-                  errorArchivo={errorArchivo}
                   cargando={enviando}
                   deshabilitado={formularioDeshabilitado}
                   motivoDeshabilitado={motivoDeshabilitado}
@@ -597,8 +676,14 @@ export function VersionesArticulo() {
                   alEnviar={enviarVersion}
                 />
 
-                {mensajeExito && <AlertaExito mensaje={mensajeExito} />}
-                {mensajeError && <AlertaError mensaje={mensajeError} />}
+                {notificacion && (
+                  <Notificacion
+                    key={notificacion.id}
+                    tipo={notificacion.tipo}
+                    mensaje={notificacion.mensaje}
+                    alCerrar={cerrarNotificacion}
+                  />
+                )}
               </div>
             </section>
 

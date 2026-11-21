@@ -123,24 +123,57 @@ function cabecerasAutor(token) {
   };
 }
 
-// Extrae el primer texto útil de las respuestas de error del backend:
-// { mensaje }, { detail } o errores de validación { campo: ["texto"] }.
-function textoErrorServidor(datos) {
-  if (!datos || typeof datos !== "object") return "";
-  if (typeof datos.mensaje === "string" && datos.mensaje) return datos.mensaje;
-  if (typeof datos.detail === "string" && datos.detail) return datos.detail;
+// Campos donde el backend puede informar errores de validación del archivo
+// (400): { mensaje }, { detail }, { archivo: [..] }, { pdf: [..] },
+// { non_field_errors: [..] } o { id_conferencia: [..] } (plazo vencido).
+const CAMPOS_ERROR_VERSION = [
+  "mensaje",
+  "detail",
+  "archivo",
+  "pdf",
+  "non_field_errors",
+  "id_conferencia",
+];
 
-  for (const valor of Object.values(datos)) {
-    if (typeof valor === "string" && valor) return valor;
-    if (Array.isArray(valor) && typeof valor[0] === "string") return valor[0];
+function primerTexto(valor) {
+  if (typeof valor === "string") return valor.trim();
+  if (Array.isArray(valor)) {
+    for (const elemento of valor) {
+      const texto = primerTexto(elemento);
+      if (texto) return texto;
+    }
   }
   return "";
 }
 
+// Extrae el primer texto útil de una respuesta de error del servidor.
+function textoErrorServidor(datos) {
+  if (typeof datos === "string") {
+    // Una página HTML de error (por ejemplo un 500) no es un mensaje para el autor.
+    return datos.trim().startsWith("<") ? "" : datos.trim();
+  }
+  if (!datos || typeof datos !== "object") return "";
+
+  for (const campo of CAMPOS_ERROR_VERSION) {
+    const texto = primerTexto(datos[campo]);
+    if (texto) return texto;
+  }
+  for (const valor of Object.values(datos)) {
+    const texto = primerTexto(valor);
+    if (texto) return texto;
+  }
+  return "";
+}
+
+// Traduce cualquier fallo de Axios a un mensaje claro en español (CA-098).
+// `accion` completa frases como "No fue posible {accion}".
 function mensajeErrorVersiones(error, accion) {
   if (!axios.isAxiosError(error)) throw error;
 
   if (!error.response) {
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      return "La solicitud tardó demasiado en responder. Intente de nuevo";
+    }
     return "No fue posible establecer conexión, compruebe su conexión a internet e intente de nuevo";
   }
 
@@ -148,8 +181,36 @@ function mensajeErrorVersiones(error, accion) {
   const mensajeServidor = textoErrorServidor(error.response.data);
 
   if (estado === 401) return "Su sesión caducó. Inicie sesión nuevamente";
+
+  if (estado === 403) {
+    return (
+      mensajeServidor ||
+      "No tiene permiso para esta operación. Solo el autor responsable puede cargar versiones del artículo"
+    );
+  }
+
+  if (estado === 404) {
+    return mensajeServidor || "El artículo no existe o no está disponible";
+  }
+
   if (estado === 413) return "El archivo supera el tamaño máximo permitido";
-  if (estado >= 500 && estado !== 502) {
+
+  if (estado === 400 || estado === 422) {
+    return (
+      mensajeServidor ||
+      `No fue posible ${accion}: revise que el archivo sea un PDF válido`
+    );
+  }
+
+  // 502: el almacenamiento falló y el backend envía un mensaje propio.
+  if (estado === 502) {
+    return (
+      mensajeServidor ||
+      "No fue posible almacenar el archivo. Inténtelo nuevamente"
+    );
+  }
+
+  if (estado >= 500) {
     return `El servidor no pudo ${accion}. Intente de nuevo más tarde`;
   }
 
