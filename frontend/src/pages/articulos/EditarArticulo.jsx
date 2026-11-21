@@ -6,8 +6,13 @@ import {
   consultarArticuloParaEditar,
   consultarConvocatoriaArticulo,
 } from "../../articulos/solicitudes";
+import {
+  hayCambios,
+  validarDatosArticulo,
+} from "../../articulos/validarArticulo";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
 import { Marca } from "../../components/Marca";
+import { AlertaFormulario } from "../../components/AlertaFormulario";
 
 const RUTA_MIS_ARTICULOS = "/autor/articulos";
 
@@ -168,6 +173,28 @@ export function EditarArticulo() {
 
     establecerErroresCampos({});
     establecerAlerta(null);
+        const erroresLocales = validarDatosArticulo(
+      valores,
+      opcionesLinea.map((linea) => String(linea.id)),
+    );
+    if (Object.keys(erroresLocales).length > 0) {
+      establecerErroresCampos(erroresLocales);
+      mostrarAlerta(
+        "error",
+        "Revisa los campos señalados antes de guardar los cambios.",
+        Object.values(erroresLocales),
+      );
+      return;
+    }
+
+    if (!hayCambios(articulo, valores)) {
+      mostrarAlerta(
+        "error",
+        "No realizaste ningún cambio. Modifica algún dato antes de guardar.",
+      );
+      return;
+    }
+
     establecerEstadoEnvio("enviando");
 
     const datos = {
@@ -563,17 +590,7 @@ export function EditarArticulo() {
               </ul>
             </section>
 
-            {alerta && (
-              <p
-                className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
-                  alerta.tipo === "exito"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    : "border-red-200 bg-red-50 text-red-900"
-                }`}
-              >
-                {alerta.mensaje}
-              </p>
-            )}
+            <AlertaFormulario alerta={alerta} />
 
             <div className="flex flex-col-reverse gap-3 border-t border-white/80 pt-6 sm:flex-row sm:justify-end">
               <Link to={RUTA_MIS_ARTICULOS} className={claseBotonSecundario}>
