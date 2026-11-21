@@ -11,8 +11,9 @@ export function InicioRol({ rol }) {
   const informacion = ROLES_DISPONIBLES[rol];
   const variosRoles = sesion.roles.length > 1;
 
-  const [barraAbierta, establecerBarraAbierta] = useState(true);
-
+  const [barraAbierta, establecerBarraAbierta] = useState(
+    () => window.innerWidth >= 1024,
+  );
   useEffect(() => {
     function cerrarConEscape(evento) {
       if (evento.key === "Escape") {
@@ -132,7 +133,8 @@ export function InicioRol({ rol }) {
 
       <div className="min-w-0 flex-1">
         <header className="border-b border-line bg-panel">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-5 sm:px-8">
+          <div className="flex min-h-20 flex-col items-stretch justify-center gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            {" "}
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
@@ -182,18 +184,17 @@ export function InicioRol({ rol }) {
                 <p className="text-xs text-muted">{informacion.nombre}</p>
               </div>
             </div>
-
-            <div className="flex shrink-0 items-center gap-4 text-sm">
+            <div className="flex w-full items-center justify-end gap-2 text-xs sm:w-auto sm:gap-4 sm:text-sm">
+              {" "}
               {variosRoles && (
                 <button
                   type="button"
                   onClick={() => navegar(RUTA_ELEGIR_ROL)}
-                  className="hidden font-semibold underline underline-offset-4 hover:text-highlight sm:inline"
+                  className="font-semibold underline underline-offset-4 transition-colors hover:text-highlight"
                 >
                   Cambiar de rol
                 </button>
               )}
-
               <button
                 type="button"
                 onClick={cerrarSesion}
