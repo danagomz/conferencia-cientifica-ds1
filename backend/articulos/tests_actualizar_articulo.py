@@ -59,3 +59,20 @@ class ArticuloActualizarDatosTests(APITestCase):
         self.assertEqual(self.articulo.titulo, 'Nuevo título')
         self.assertEqual(self.articulo.resumen, resumen_original)
         self.assertEqual(self.articulo.palabras_clave, palabras_originales)
+
+    def test_autor_asociado_actualiza_articulo_mediante_patch(self):
+        self.client.force_authenticate(self.autor)
+
+        respuesta = self.client.patch(
+            f'/api/articulos/{self.articulo.id_articulo}/',
+            {'titulo': 'Artículo actualizado por PATCH'},
+            format='json',
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.articulo.refresh_from_db()
+        self.assertEqual(
+            self.articulo.titulo,
+            'Artículo actualizado por PATCH',
+        )

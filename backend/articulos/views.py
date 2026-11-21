@@ -13,10 +13,11 @@ from .permisos_detalle import (
 from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
 from .permissions import EsAutor
 from .queries import consultar_articulos
-from .serializers import ArticuloCrearSerializer
 from .serializers_consulta import ArticuloListadoSerializer
 from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
+from .permisos_modificacion import PuedeModificarArticulo
+from .serializers import ArticuloCrearSerializer, ArticuloActualizarSerializer
 
 MENSAJE_SIN_RESULTADOS = 'No se encontraron artículos que coincidan con la consulta.'
 
@@ -128,6 +129,11 @@ class ArticuloDetalleView(APIView):
 
     permission_classes = [PuedeConsultarDetalleArticulo]
 
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [PuedeModificarArticulo()]
+        return super().get_permissions()
+
     def get(self, request, pk):
         # Si no existe o está deshabilitado: 404 para todos (CA-077).
         articulo = consultar_articulos().filter(pk=pk).first()
@@ -146,8 +152,16 @@ class ArticuloDetalleView(APIView):
         if articulo is None:
             raise NotFound(MENSAJE_NO_DISPONIBLE)
 
-        # SDGC-178: integrar aquí el permiso específico de modificación.
-        # Mientras no esté integrado, se bloquea la modificación por seguridad.
-        raise PermissionDenied(
-            'La modificación requiere integrar primero el permiso de SDGC-178.'
+        # Verificar que el autor esté asociado al artículo.
+        self.check_object_permissions(request, articulo)
+
+        serializer = ArticuloActualizarSerializer(
+            articulo,
+            data=request.data,
+            partial=True,
         )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
