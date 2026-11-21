@@ -703,8 +703,8 @@ function crearErrorEdicionUsuario(error, operacion) {
   const { erroresCampo, erroresGenerales } =
     extraerErroresCrearUsuario(datos);
 
-  const detalle =
-    typeof datos?.detail === "string" ? datos.detail : "";
+  traducirErroresEdicion(erroresCampo);
+  traducirErroresEdicion(erroresGenerales);
 
   let mensaje;
 
@@ -715,9 +715,7 @@ function crearErrorEdicionUsuario(error, operacion) {
     mensaje =
       "Tu sesión no es válida o ha vencido. Inicia sesión nuevamente.";
   } else if (estado === 403) {
-    mensaje =
-      detalle ||
-      "No tienes permisos para consultar o modificar esta cuenta.";
+    mensaje = `No tienes permisos para ${operacion}.`;
   } else if (estado === 404) {
     mensaje =
       "El usuario que intentas consultar o editar no existe o ya no está disponible.";
@@ -741,6 +739,22 @@ function crearErrorEdicionUsuario(error, operacion) {
   errorSolicitud.estadoHttp = estado;
 
   return errorSolicitud;
+}
+
+function traducirErroresEdicion(errores) {
+  const traducciones = {
+    "This field may not be blank.": "Este campo no puede estar vacío.",
+    "This field is required.": "Este campo es obligatorio.",
+    "Enter a valid email address.": "Ingresa un correo electrónico válido.",
+    "Not a valid string.": "Ingresa un texto válido.",
+    "Not a valid list.": "Selecciona una lista válida de roles.",
+  };
+
+  for (const [campo, mensajes] of Object.entries(errores)) {
+    errores[campo] = mensajes.map(
+      (mensaje) => traducciones[mensaje] ?? mensaje,
+    );
+  }
 }
 
 export async function obtenerUsuarioPorId({
