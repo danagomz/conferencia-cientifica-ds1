@@ -138,7 +138,15 @@ export function validarFormularioEdicionUsuario(
 
   // La contraseña es opcional durante la edición.
   if (contrasena) {
-    if (contrasena.length < 8) {
+    if (!contrasena.trim()) {
+      errores.contrasena = [
+        "La contraseña no puede estar formada solo por espacios.",
+      ];
+    } else if (contrasena !== contrasena.trim()) {
+      errores.contrasena = [
+        "La contraseña no puede tener espacios al inicio o al final.",
+      ];
+    } else if (contrasena.length < 8) {
       errores.contrasena = [
         "La contraseña debe tener al menos 8 caracteres.",
       ];

@@ -193,6 +193,7 @@ class UsuarioEditarSerializer(serializers.Serializer):
 
     email = serializers.EmailField(
         required=False,
+        max_length=150,
     )
 
     institucion = serializers.CharField(
@@ -213,22 +214,55 @@ class UsuarioEditarSerializer(serializers.Serializer):
 
     def to_internal_value(self, datos):
         """
-        Bloquea cualquier intento de enviar roles al editar
-        la propia cuenta, incluso si el usuario es ADMIN.
+        Bloquea cualquier intento de modificar roles o niveles
+        de autorización al editar la propia cuenta.
         """
         request = self.context.get('request')
 
-        if (
-            request
-            and self.instance
-            and self.instance.pk == request.user.pk
-            and 'roles' in datos
-        ):
+        if request and self.instance and self.instance.pk == request.user.pk:
+            campos_protegidos = {
+                campo: 'No puedes modificar los roles o niveles de autorización de tu propia cuenta.'
+                for campo in ('roles', 'is_staff', 'is_superuser')
+                if campo in datos
+            }
+            if campos_protegidos:
+                raise serializers.ValidationError(campos_protegidos)
+
+        campos_nivel_autorizacion = [
+            campo for campo in ('is_staff', 'is_superuser')
+            if campo in datos
+        ]
+        if campos_nivel_autorizacion:
             raise serializers.ValidationError({
-                'roles': 'No puedes modificar los roles de tu propia cuenta.'
+                campo: 'No puedes modificar este nivel de autorización.'
+                for campo in campos_nivel_autorizacion
             })
 
         return super().to_internal_value(datos)
+
+    def validate_first_name(self, value):
+        valor = value.strip()
+        if not valor:
+            raise serializers.ValidationError(
+                'El nombre no puede estar vacío ni contener solo espacios.'
+            )
+        return valor
+
+    def validate_last_name(self, value):
+        valor = value.strip()
+        if not valor:
+            raise serializers.ValidationError(
+                'El apellido no puede estar vacío ni contener solo espacios.'
+            )
+        return valor
+
+    def validate_institucion(self, value):
+        valor = value.strip()
+        if not valor:
+            raise serializers.ValidationError(
+                'La institución no puede estar vacía ni contener solo espacios.'
+            )
+        return valor
 
     def validate_email(self, value):
         correo = value.strip().lower()
@@ -275,12 +309,50 @@ class UsuarioEditarSerializer(serializers.Serializer):
         return roles
 
     def validate(self, datos):
-        # La contraseña solo se valida si fue enviada.
+        # La contraseña solo se valida si fue enviada. Se construye
+        # un usuario temporal con los datos modificados para comparar
+        # también contra nombre, apellido y correo nuevos.
         if 'password' in datos:
+            password = datos['password']
+
+            if password != password.strip():
+                raise serializers.ValidationError({
+                    'password': [
+                        'La contraseña no puede tener espacios al inicio o al final.'
+                    ]
+                })
+
+            if not password or password.strip() == '':
+                raise serializers.ValidationError({
+                    'password': [
+                        'La contraseña no puede estar formada solo por espacios.'
+                    ]
+                })
+
+            if len(password) < 8:
+                raise serializers.ValidationError({
+                    'password': [
+                        'La contraseña debe tener al menos 8 caracteres.'
+                    ]
+                })
+
+            if password.isdigit():
+                raise serializers.ValidationError({
+                    'password': [
+                        'La contraseña no puede estar formada solo por números.'
+                    ]
+                })
+
+            usuario_temporal = User(
+                first_name=datos.get('first_name', self.instance.first_name),
+                last_name=datos.get('last_name', self.instance.last_name),
+                email=datos.get('email', self.instance.email),
+            )
+
             try:
                 validate_password(
-                    datos['password'],
-                    user=self.instance,
+                    password,
+                    user=usuario_temporal,
                 )
             except Exception as error:
                 raise serializers.ValidationError({
