@@ -344,3 +344,148 @@ export async function obtenerArticulo(token, idArticulo) {
     throw new Error(mensajeErrorConsulta(error), { cause: error });
   }
 }
+
+// ───────────── HU-012 · Modificar artículo (SDGC-173) ─────────────
+
+// Campos del servidor donde el backend informa errores de validación (400).
+const CAMPOS_EDITABLES_SERVIDOR = [
+  "titulo",
+  "resumen",
+  "palabras_clave",
+  "id_linea",
+];
+
+function erroresCamposServidor(datos) {
+  if (!datos || typeof datos !== "object" || Array.isArray(datos)) return {};
+
+  const campos = {};
+  for (const campo of CAMPOS_EDITABLES_SERVIDOR) {
+    const texto = primerTexto(datos[campo]);
+    if (texto) campos[campo] = texto;
+  }
+  return campos;
+}
+
+// Convierte un fallo de Axios en un Error con mensaje claro en español.
+// Agrega `estadoHttp` y `erroresCampos` para que la pantalla decida qué mostrar.
+function crearErrorEdicion(error, accion) {
+  const estadoHttp = error.response?.status ?? null;
+  const datos = error.response?.data;
+  const erroresCampos = erroresCamposServidor(datos);
+  const mensajeServidor = textoErrorServidor(datos);
+  let mensaje;
+
+  if (!error.response) {
+    mensaje =
+      error.code === "ECONNABORTED" || error.code === "ETIMEDOUT"
+        ? "La solicitud tardó demasiado en responder. Intente de nuevo"
+        : "No fue posible establecer conexión, compruebe su conexión a internet e intente de nuevo";
+  } else if (estadoHttp === 401) {
+    mensaje = "Su sesión caducó. Inicie sesión nuevamente";
+  } else if (estadoHttp === 403) {
+    mensaje =
+      mensajeServidor || "No tiene autorización para modificar este artículo";
+  } else if (estadoHttp === 404) {
+    mensaje = mensajeServidor || "El artículo no existe o no está disponible";
+  } else if (estadoHttp === 400 || estadoHttp === 422) {
+    mensaje =
+      Object.keys(erroresCampos).length > 0
+        ? "Revise los datos señalados antes de guardar"
+        : mensajeServidor ||
+          `No fue posible ${accion}: revise los datos ingresados`;
+  } else if (estadoHttp >= 500) {
+    mensaje = `El servidor no pudo ${accion}. Intente de nuevo más tarde`;
+  } else {
+    mensaje = mensajeServidor || `No fue posible ${accion}`;
+  }
+
+  const errorEdicion = new Error(mensaje, { cause: error });
+  errorEdicion.estadoHttp = estadoHttp;
+  errorEdicion.erroresCampos = erroresCampos;
+  return errorEdicion;
+}
+
+/**
+ * Datos actuales del artículo para precargar el formulario.
+ * GET /api/articulos/<id>/ → id, titulo, resumen, palabras_clave, id_conferencia,
+ * conferencia, id_linea, linea, estado, autores, ...
+ * 403 → el artículo no es del autor · 404 → no existe o está deshabilitado.
+ */
+export async function consultarArticuloParaEditar(token, idArticulo) {
+  if (!token) throw new Error("Inicie sesión para modificar el artículo");
+  if (!idArticulo) throw new Error("No se indicó el artículo a modificar");
+
+  try {
+    const respuesta = await axios.get(`${URL_ARTICULOS}${idArticulo}/`, {
+      headers: cabecerasAutor(token),
+    });
+
+    if (!respuesta.data || typeof respuesta.data !== "object") {
+      throw new Error("El servidor devolvió un detalle de artículo inválido");
+    }
+
+    return respuesta.data;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    throw crearErrorEdicion(error, "consultar el artículo");
+  }
+}
+
+/**
+ * Plazo y líneas temáticas habilitadas de la conferencia del artículo.
+ * GET /api/articulos/contexto/. Devuelve null si la conferencia no aparece
+ * (por ejemplo, no está activa): en ese caso decide el servidor.
+ */
+export async function consultarConvocatoriaArticulo(token, idConferencia) {
+  if (!token) throw new Error("Inicie sesión para consultar la convocatoria");
+
+  let respuesta;
+
+  try {
+    respuesta = await axios.get(`${URL_ARTICULOS}contexto/`, {
+      headers: cabecerasAutor(token),
+    });
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    throw crearErrorEdicion(error, "consultar la convocatoria");
+  }
+
+  const convocatorias = respuesta.data?.convocatorias;
+  if (!Array.isArray(convocatorias)) return null;
+
+  const convocatoria = convocatorias.find(
+    (item) => String(item.id) === String(idConferencia),
+  );
+  if (!convocatoria) return null;
+
+  return {
+    nombre: convocatoria.nombre,
+    abierto: Boolean(convocatoria.postulaciones_abiertas),
+    fechaLimite: convocatoria.fecha_limite_postulaciones ?? null,
+    lineas: Array.isArray(convocatoria.lineas_tematicas)
+      ? convocatoria.lineas_tematicas
+      : [],
+  };
+}
+
+/**
+ * Actualiza los datos generales del artículo.
+ * PATCH /api/articulos/<id>/ con { titulo, resumen, palabras_clave, id_linea }.
+ * 400 → errores por campo · 401 sesión · 403/404 sin permiso o inexistente.
+ */
+export async function actualizarArticulo(token, idArticulo, datos) {
+  if (!token) throw new Error("Inicie sesión para modificar el artículo");
+  if (!idArticulo) throw new Error("No se indicó el artículo a modificar");
+
+  try {
+    const respuesta = await axios.patch(
+      `${URL_ARTICULOS}${idArticulo}/`,
+      datos,
+      { headers: cabecerasAutor(token) },
+    );
+    return respuesta.data;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+    throw crearErrorEdicion(error, "actualizar el artículo");
+  }
+}

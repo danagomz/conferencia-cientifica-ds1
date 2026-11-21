@@ -16,6 +16,7 @@ import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
 import { VersionesArticulo } from "./pages/articulos/VersionesArticulo";
+import { EditarArticulo } from "./pages/articulos/EditarArticulo";
 import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
 
 const EditarUsuario = lazy(() =>
@@ -75,6 +76,14 @@ function PaginaVersionesArticulo() {
   if (sesion.rolActivo !== "AUTOR")
     return <Navigate to={rutaInicial(sesion)} replace />;
   return <VersionesArticulo />;
+}
+
+function PaginaEditarArticulo() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (sesion.rolActivo !== "AUTOR")
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <EditarArticulo />;
 }
 
 function PaginaRegistroArticulo() {
@@ -182,6 +191,10 @@ function Aplicacion() {
             <Route
               path="/autor/articulos/:id/versiones"
               element={<PaginaVersionesArticulo />}
+            />
+            <Route
+              path="/autor/articulos/:id/editar"
+              element={<PaginaEditarArticulo />}
             />
             {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
               <Route

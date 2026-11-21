@@ -32,7 +32,7 @@ const MODOS = {
 };
 
 const COLUMNAS_CON_AUTOR = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
-const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_170px_110px_150px_160px]";
+const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_170px_110px_150px_250px]";
 
 function formatearFecha(valor) {
   const fecha = new Date(valor.length === 10 ? `${valor}T00:00:00` : valor);
@@ -395,7 +395,7 @@ function ListadoArticulos({ modo = "todos" }) {
             <span>Línea Temática</span>
             <span>Fecha</span>
             <span>Estado</span>
-            {modo === "propios" && <span>Versiones</span>}
+                        {modo === "propios" && <span>Acciones</span>}
           </div>
 
           {/* Cuerpo: carga, error, vacío o filas */}
@@ -499,7 +499,14 @@ function ListadoArticulos({ modo = "todos" }) {
                     </div>
 
                     {modo === "propios" && (
-                      <div className="relative z-10">
+                      <div className="relative z-10 flex flex-wrap gap-2">
+                        <Link
+                          to={`/autor/articulos/${art.id}/editar`}
+                          aria-label={`Editar el artículo ${art.titulo}`}
+                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+                        >
+                          Editar
+                        </Link>
                         <Link
                           to={`/autor/articulos/${art.id}/versiones`}
                           aria-label={`Gestionar versiones de ${art.titulo}`}
