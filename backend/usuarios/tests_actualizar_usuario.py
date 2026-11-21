@@ -75,14 +75,17 @@ class ActualizarUsuarioTests(APITestCase):
 
         self.assertEqual(respuesta.status_code, 400)
 
-    def test_rechaza_actualizacion_vacia(self):
+    def test_actualizacion_vacia_no_cambia_nada(self):
         respuesta = self.client.patch(
             self.url,
             {},
             format='json'
         )
 
-        self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(respuesta.status_code, 200)
+        self.autor.refresh_from_db()
+        self.assertEqual(self.autor.first_name, 'Laura')
+        self.assertEqual(self.autor.last_name, 'Ruiz')
 
     def test_rechaza_cambios_de_contrasena_y_roles(self):
         contrasena_anterior = 'Clave#12345'

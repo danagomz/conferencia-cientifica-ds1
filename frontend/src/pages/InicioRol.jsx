@@ -48,8 +48,18 @@ export function InicioRol({ rol }) {
           Panel de {informacion.nombre.toLowerCase()}
         </h1>
         <span className="mt-3 block h-1.5 w-14 rounded-full bg-highlight" />
-        <p className="mt-3 max-w-prose text-muted">{informacion.descripcion}</p>
+        <p className="mt-3 max-w-prose text-muted">
+          {informacion.descripcion}
+        </p>
 
+        {/* Enlace para actualizar los datos personales de la cuenta */}
+        <Link
+          to="/perfil/editar"
+          className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+        >
+          Actualizar mis datos
+        </Link> 
+         
         {rol === "AUTOR" && (
           <div className="mt-7 flex flex-wrap gap-3">
             <Link

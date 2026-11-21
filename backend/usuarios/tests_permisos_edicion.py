@@ -80,13 +80,24 @@ class PermisosEdicionUsuarioTests(APITestCase):
         respuesta = self.editar(self.multirol, self.otro_autor, 'Editado', **{CABECERA: ADMIN})
         self.assertEqual(respuesta.status_code, 200)
 
-    def test_nadie_cambia_su_rol_ni_el_de_otros_con_el_formulario(self):
-        self.client.force_authenticate(self.admin)
-        for objetivo in (self.admin, self.autor):
+    def test_nadie_cambia_su_propio_rol_con_el_formulario(self):
+        # CA-028: ni siquiera el administrador cambia sus propios roles.
+        for usuario in (self.admin, self.comite, self.autor):
+            self.client.force_authenticate(usuario)
             respuesta = self.client.patch(
-                f'/api/usuarios/{objetivo.pk}/', {'roles': [ADMIN]}, format='json'
+                f'/api/usuarios/{usuario.pk}/', {'roles': [ADMIN, COMITE, AUTOR]}, format='json'
             )
             self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(
+            set(self.autor.roles_asignados.values_list('rol__nombre_rol', flat=True)), {AUTOR}
+        )
+
+    def test_comite_no_puede_dar_el_rol_de_administrador(self):
+        self.client.force_authenticate(self.comite)
+        respuesta = self.client.patch(
+            f'/api/usuarios/{self.autor.pk}/', {'roles': [ADMIN]}, format='json'
+        )
+        self.assertEqual(respuesta.status_code, 400)
         self.assertEqual(
             set(self.autor.roles_asignados.values_list('rol__nombre_rol', flat=True)), {AUTOR}
         )

@@ -91,3 +91,104 @@ export function validarFormularioUsuario(datos, rolesPermitidos) {
 
   return errores
 }
+
+export function validarFormularioEdicionUsuario(
+  datos,
+  rolesPermitidos = [],
+  { permitirRoles = false } = {},
+) {
+  const errores = {};
+  const rolesValidos = codigosDeRoles(rolesPermitidos);
+
+  const camposObligatorios = [
+    ["nombre", "Ingresa el nombre."],
+    ["apellido", "Ingresa el apellido."],
+    ["correo", "Ingresa el correo electrónico."],
+    ["institucion", "Ingresa la institución o afiliación."],
+  ];
+
+  camposObligatorios.forEach(([campo, mensaje]) => {
+    if (!datos[campo]?.trim()) {
+      errores[campo] = [mensaje];
+    }
+  });
+
+  for (const campo of ["nombre", "apellido", "institucion"]) {
+    if (datos[campo]?.length > 150) {
+      errores[campo] = [
+        "Este campo no puede superar los 150 caracteres.",
+      ];
+    }
+  }
+
+  const correo = datos.correo?.trim() ?? "";
+
+  if (correo && correo.length > 150) {
+    errores.correo = [
+      "El correo, que también se usa como nombre de usuario, no puede superar los 150 caracteres.",
+    ];
+  } else if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    errores.correo = [
+      "Ingresa un correo electrónico válido, sin espacios.",
+    ];
+  }
+
+  const contrasena = datos.contrasena ?? "";
+  const confirmarContrasena = datos.confirmarContrasena ?? "";
+
+  // La contraseña es opcional durante la edición.
+  if (contrasena) {
+    if (!contrasena.trim()) {
+      errores.contrasena = [
+        "La contraseña no puede estar formada solo por espacios.",
+      ];
+    } else if (contrasena !== contrasena.trim()) {
+      errores.contrasena = [
+        "La contraseña no puede tener espacios al inicio o al final.",
+      ];
+    } else if (contrasena.length < 8) {
+      errores.contrasena = [
+        "La contraseña debe tener al menos 8 caracteres.",
+      ];
+    } else if (/^\d+$/.test(contrasena)) {
+      errores.contrasena = [
+        "La contraseña no puede estar formada solo por números.",
+      ];
+    } else if (esSimilarADatosPersonales(contrasena, datos)) {
+      errores.contrasena = [
+        "La contraseña no puede ser demasiado similar a tu nombre, apellido o correo.",
+      ];
+    }
+
+    if (!confirmarContrasena) {
+      errores.confirmarContrasena = [
+        "Confirma la nueva contraseña.",
+      ];
+    } else if (contrasena !== confirmarContrasena) {
+      errores.confirmarContrasena = [
+        "Las contraseñas no coinciden.",
+      ];
+    }
+  } else if (confirmarContrasena) {
+    errores.confirmarContrasena = [
+      "Escribe una nueva contraseña antes de confirmarla.",
+    ];
+  }
+
+  // Los roles solamente se validan cuando se edita a otra persona.
+  if (permitirRoles) {
+    const roles = Array.isArray(datos.roles) ? datos.roles : [];
+
+    if (roles.length === 0) {
+      errores.roles = [
+        "Selecciona al menos un rol para el usuario.",
+      ];
+    } else if (roles.some((rol) => !rolesValidos.includes(rol))) {
+      errores.roles = [
+        "Selecciona únicamente roles autorizados para tu cuenta.",
+      ];
+    }
+  }
+
+  return errores;
+}
