@@ -58,8 +58,8 @@ export function InicioRol({ rol }) {
           className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
         >
           Actualizar mis datos
-        </Link>
-
+        </Link> 
+         
         {rol === "AUTOR" && (
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
