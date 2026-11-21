@@ -691,3 +691,174 @@ export async function obtenerUsuarios(token, rolActivo, filtros = {}) {
     throw new Error(mensajeErrorConsultaUsuarios(error), { cause: error });
   }
 }
+
+function crearErrorEdicionUsuario(error, operacion) {
+  if (!axios.isAxiosError(error)) {
+    throw error;
+  }
+
+  const estado = error.response?.status;
+  const datos = error.response?.data;
+
+  const { erroresCampo, erroresGenerales } =
+    extraerErroresCrearUsuario(datos);
+
+  const detalle =
+    typeof datos?.detail === "string" ? datos.detail : "";
+
+  let mensaje;
+
+  if (!error.response) {
+    mensaje =
+      "No fue posible conectarse al servidor. Comprueba tu conexión e inténtalo nuevamente.";
+  } else if (estado === 401) {
+    mensaje =
+      "Tu sesión no es válida o ha vencido. Inicia sesión nuevamente.";
+  } else if (estado === 403) {
+    mensaje =
+      detalle ||
+      "No tienes permisos para consultar o modificar esta cuenta.";
+  } else if (estado === 404) {
+    mensaje =
+      "El usuario que intentas consultar o editar no existe o ya no está disponible.";
+  } else if (estado >= 500) {
+    mensaje =
+      "El servidor no pudo completar la operación. Inténtalo más tarde.";
+  } else {
+    mensaje =
+      erroresGenerales.join(" ") ||
+      (Object.keys(erroresCampo).length > 0
+        ? "El servidor rechazó algunos datos. Revisa los campos indicados."
+        : `No se pudo ${operacion}. Revisa los datos e inténtalo nuevamente.`);
+  }
+
+  const errorSolicitud = new Error(mensaje, {
+    cause: error,
+  });
+
+  errorSolicitud.erroresCampo = erroresCampo;
+  errorSolicitud.erroresGenerales = erroresGenerales;
+  errorSolicitud.estadoHttp = estado;
+
+  return errorSolicitud;
+}
+
+export async function obtenerUsuarioPorId({
+  id,
+  token,
+  rolActivo,
+}) {
+  if (!id) {
+    throw new Error("No se indicó el usuario que se desea consultar.");
+  }
+
+  if (!token) {
+    throw new Error("Inicia sesión para consultar esta cuenta.");
+  }
+
+  if (!rolActivo) {
+    throw new Error(
+      "No se pudo determinar el rol de acceso para consultar esta cuenta.",
+    );
+  }
+
+  try {
+    const respuesta = await axios.get(
+      `${RUTA_CONSULTAR_USUARIOS}${encodeURIComponent(id)}/`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "X-Rol-Activo": rolActivo,
+        },
+      },
+    );
+
+    return respuesta.data;
+  } catch (error) {
+    throw crearErrorEdicionUsuario(error, "consultar los datos del usuario");
+  }
+}
+
+export async function actualizarUsuario({
+  id,
+  idUsuarioSesion,
+  token,
+  rolActivo,
+  nombre,
+  apellido,
+  correo,
+  institucion,
+  contrasena,
+  roles,
+}) {
+  if (!id) {
+    throw new Error("No se indicó el usuario que se desea actualizar.");
+  }
+
+  if (!token) {
+    throw new Error("Inicia sesión para actualizar esta cuenta.");
+  }
+
+  if (!rolActivo) {
+    throw new Error(
+      "No se pudo determinar el rol de acceso para actualizar esta cuenta.",
+    );
+  }
+
+  // Construye únicamente los campos personales permitidos.
+  const datosActualizacion = {
+    first_name: nombre.trim(),
+    last_name: apellido.trim(),
+    email: correo.trim().toLowerCase(),
+    institucion: institucion.trim(),
+  };
+
+  // Nunca se envía una contraseña vacía.
+  if (contrasena?.trim()) {
+    datosActualizacion.password = contrasena;
+  }
+
+  const editaOtraCuenta =
+    idUsuarioSesion !== undefined &&
+    idUsuarioSesion !== null &&
+    String(id) !== String(idUsuarioSesion);
+
+  const puedeAsignarRoles =
+    ["ADMIN", "COMITE"].includes(rolActivo);
+
+  /*
+   * CA-028:
+   * Los roles únicamente pueden incluirse si:
+   * 1. Se está editando otra cuenta.
+   * 2. El rol activo es ADMIN o COMITE.
+   *
+   * Si se edita la cuenta propia, roles no se agrega
+   * al objeto enviado mediante PATCH.
+   */
+  if (
+    editaOtraCuenta &&
+    puedeAsignarRoles &&
+    Array.isArray(roles)
+  ) {
+    datosActualizacion.roles = roles;
+  }
+
+  try {
+    const respuesta = await axios.patch(
+      `${RUTA_CONSULTAR_USUARIOS}${encodeURIComponent(id)}/`,
+      datosActualizacion,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "X-Rol-Activo": rolActivo,
+        },
+      },
+    );
+
+    return respuesta.data;
+  } catch (error) {
+    throw crearErrorEdicionUsuario(error, "actualizar los datos del usuario");
+  }
+}
