@@ -147,3 +147,49 @@ class VersionArticulo(models.Model):
 
     def __str__(self):
         return f"{self.id_articulo.titulo} - Versión {self.numero_version}"
+
+
+class AsignacionEvaluador(models.Model):
+    """Asociación entre un artículo y un evaluador del comité científico (HU-015, SDGC-201)."""
+
+    ESTADO_ASIGNADA = 'ASIGNADA'
+
+    id_asignacion = models.AutoField(primary_key=True)
+
+    id_articulo = models.ForeignKey(
+        Articulo,
+        on_delete=models.CASCADE,
+        db_column='id_articulo',
+        related_name='asignaciones_evaluador'
+    )
+
+    id_evaluador = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column='id_evaluador',
+        related_name='asignaciones_como_evaluador'
+    )
+
+    id_usuario_asigna = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column='id_usuario_asigna',
+        related_name='asignaciones_realizadas'
+    )
+
+    fecha_asignacion = models.DateTimeField(default=timezone.now)
+    estado_asignacion = models.CharField(max_length=30, default=ESTADO_ASIGNADA)
+
+    class Meta:
+        db_table = 'asignacion_evaluador'
+        verbose_name = 'Asignación de evaluador'
+        verbose_name_plural = 'Asignaciones de evaluadores'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_articulo', 'id_evaluador'],
+                name='uq_evaluador_por_articulo'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.id_articulo.titulo} - {self.id_evaluador.email}"
