@@ -15,6 +15,7 @@ import { ConfiguracionConferencia } from "./pages/ConfiguracionConferencia";
 import { CrearUsuario } from "./pages/CrearUsuario";
 import { SelectorRol } from "./pages/SelectorRol";
 import ListadoArticulos from "./pages/articulos/ListadoArticulos";
+import { VersionesArticulo } from "./pages/articulos/VersionesArticulo";
 import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
 
 const EditarUsuario = lazy(() =>
@@ -66,6 +67,14 @@ function PaginaMisArticulos() {
   if (sesion.rolActivo !== "AUTOR")
     return <Navigate to={rutaInicial(sesion)} replace />;
   return <ListadoArticulos modo="propios" />;
+}
+
+function PaginaVersionesArticulo() {
+  const { sesion } = useAutenticacion();
+  if (!sesion.rolActivo) return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  if (sesion.rolActivo !== "AUTOR")
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  return <VersionesArticulo />;
 }
 
 function PaginaRegistroArticulo() {
@@ -170,6 +179,10 @@ function Aplicacion() {
             <Route path="/gestion/usuarios" element={<PaginaUsuarios />} />
             <Route path="/gestion/articulos" element={<PaginaArticulos />} />
             <Route path="/autor/articulos" element={<PaginaMisArticulos />} />
+            <Route
+              path="/autor/articulos/:id/versiones"
+              element={<PaginaVersionesArticulo />}
+            />
             {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
               <Route
                 key={rol}
