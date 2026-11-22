@@ -18,6 +18,7 @@ import ListadoArticulos from "./pages/articulos/ListadoArticulos";
 import { VersionesArticulo } from "./pages/articulos/VersionesArticulo";
 import { EditarArticulo } from "./pages/articulos/EditarArticulo";
 import { ListadoUsuarios } from "./pages/usuarios/ListadoUsuarios";
+import { AsignacionEvaluadores } from "./pages/evaluadores/AsignacionEvaluadores";
 
 const EditarUsuario = lazy(() =>
   import("./pages/EditarUsuario").then(({ EditarUsuario: pagina }) => ({
@@ -43,6 +44,20 @@ function PaginaSeleccionRol() {
   ) : (
     <Navigate to={rutaInicial(sesion)} replace />
   );
+}
+
+function PaginaAsignacionEvaluadores() {
+  const { sesion } = useAutenticacion();
+
+  if (!sesion.rolActivo) {
+    return <Navigate to={RUTA_ELEGIR_ROL} replace />;
+  }
+
+  if (sesion.rolActivo !== "COMITE") {
+    return <Navigate to={rutaInicial(sesion)} replace />;
+  }
+
+  return <AsignacionEvaluadores />;
 }
 
 function PaginaSoloRol({ rol }) {
@@ -173,10 +188,7 @@ function Aplicacion() {
               path="/configuracion-conferencia"
               element={<PaginaConfiguracionConferencia />}
             />
-            <Route
-              path="/perfil/editar"
-              element={<PaginaEditarPerfil />}
-            />
+            <Route path="/perfil/editar" element={<PaginaEditarPerfil />} />
             <Route
               path="/gestion/usuarios/:id/editar"
               element={<PaginaEditarOtroUsuario />}
@@ -195,6 +207,10 @@ function Aplicacion() {
             <Route
               path="/autor/articulos/:id/editar"
               element={<PaginaEditarArticulo />}
+            />
+            <Route
+              path="/gestion/evaluadores/asignar/:idArticulo"
+              element={<PaginaAsignacionEvaluadores />}
             />
             {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (
               <Route

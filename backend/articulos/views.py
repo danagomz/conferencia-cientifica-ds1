@@ -9,15 +9,17 @@ from rest_framework.views import APIView
 
 from conferencias.models import Conferencia, Plazo
 
-from .filtros import aplicar_filtros, criterios_de_filtrado
+from .filtros import (
+    anotar_evaluadores_asignados, aplicar_filtro_sin_evaluadores, aplicar_filtros, criterios_de_filtrado,
+)
 from .models import Articulo, AutorArticulo, VersionArticulo
 from .permisos_detalle import (
     MENSAJE_NO_DISPONIBLE, MENSAJE_NO_ASOCIADO, PuedeConsultarDetalleArticulo, puede_ver_articulo,
 )
-from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos
+from .permisos_consulta import PuedeConsultarArticulos, articulos_permitidos, ve_todos_los_articulos
 from .permissions import EsAutor
 from .queries import consultar_articulos
-from .serializers_consulta import ArticuloListadoSerializer
+from .serializers_consulta import ArticuloListadoConEvaluadoresSerializer, ArticuloListadoSerializer
 from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 from .permisos_modificacion import PuedeModificarArticulo
@@ -95,7 +97,14 @@ class ArticuloCrearView(APIView):
     def get(self, request):
         visibles = articulos_permitidos(consultar_articulos(), request.user)
         articulos = aplicar_filtros(visibles, request.query_params)
-        resultados = ArticuloListadoSerializer(articulos, many=True).data
+        serializador = ArticuloListadoSerializer
+        if ve_todos_los_articulos(request.user):
+            # HU-015, CA-099: solo administrador y comité ven cuántos evaluadores tiene cada
+            # artículo y pueden filtrar los que aún no tienen.
+            articulos = anotar_evaluadores_asignados(articulos)
+            articulos = aplicar_filtro_sin_evaluadores(articulos, request.query_params)
+            serializador = ArticuloListadoConEvaluadoresSerializer
+        resultados = serializador(articulos, many=True).data
         return Response({
             'count': len(resultados),
             'mensaje': None if resultados else MENSAJE_SIN_RESULTADOS,

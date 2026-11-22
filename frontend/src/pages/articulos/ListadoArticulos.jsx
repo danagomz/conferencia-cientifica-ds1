@@ -156,6 +156,7 @@ function ListadoArticulos({ modo = "todos" }) {
 
   const [lineaSeleccionada, setLineaSeleccionada] = useState("");
   const [estadoSeleccionado, setEstadoSeleccionado] = useState("");
+  const [sinEvaluadores, setSinEvaluadores] = useState(false);
   const [criterios, setCriterios] = useState({ lineas: [], estados: [] });
 
   useEffect(() => {
@@ -167,6 +168,8 @@ function ListadoArticulos({ modo = "todos" }) {
         : listarArticulos(sesion?.tokenAcceso, {
             idLinea: lineaSeleccionada,
             estado: estadoSeleccionado,
+            sinEvaluadores,
+            modo,
           });
 
     solicitud
@@ -195,6 +198,7 @@ function ListadoArticulos({ modo = "todos" }) {
     sesion?.tokenAcceso,
     lineaSeleccionada,
     estadoSeleccionado,
+    sinEvaluadores,
     modo,
   ]);
 
@@ -230,13 +234,15 @@ function ListadoArticulos({ modo = "todos" }) {
 
   const total = articulos.length;
   const hayFiltrosActivos =
-    config.conFiltros && Boolean(lineaSeleccionada || estadoSeleccionado);
+    config.conFiltros &&
+    Boolean(lineaSeleccionada || estadoSeleccionado || sinEvaluadores);
 
   function limpiarFiltros() {
     setCargando(true);
     setError("");
     setLineaSeleccionada("");
     setEstadoSeleccionado("");
+    setSinEvaluadores(false);
   }
 
   return (
@@ -375,6 +381,20 @@ function ListadoArticulos({ modo = "todos" }) {
                 </select>
               </div>
 
+              {sesion?.rolActivo === "COMITE" && (
+                <label className="flex min-h-12 cursor-pointer items-center gap-3 border-2 border-highlight bg-panel px-4 text-sm font-semibold text-fg">
+                  <input
+                    type="checkbox"
+                    checked={sinEvaluadores}
+                    onChange={(evento) =>
+                      setSinEvaluadores(evento.target.checked)
+                    }
+                    className="checkbox checkbox-sm rounded-none border-highlight"
+                  />
+                  Sin evaluadores
+                </label>
+              )}
+
               <button
                 type="button"
                 onClick={limpiarFiltros}
@@ -395,7 +415,7 @@ function ListadoArticulos({ modo = "todos" }) {
             <span>Línea Temática</span>
             <span>Fecha</span>
             <span>Estado</span>
-                        {modo === "propios" && <span>Acciones</span>}
+            {modo === "propios" && <span>Acciones</span>}
           </div>
 
           {/* Cuerpo: carga, error, vacío o filas */}
@@ -460,6 +480,20 @@ function ListadoArticulos({ modo = "todos" }) {
                         {art.titulo}
                       </Link>
 
+                      {sesion?.rolActivo === "COMITE" && (
+                        <Link
+                          to={`/gestion/evaluadores/asignar/${art.id}`}
+                          onClick={(evento) => evento.stopPropagation()}
+                          className="relative z-20 mt-2 inline-flex min-h-9 items-center rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg"
+                        >
+                          {art.evaluadores_asignados === 0
+                            ? "Asignar evaluadores"
+                            : art.evaluadores_asignados < 3
+                              ? "Completar evaluadores"
+                              : "Ver evaluadores asignados"}
+                        </Link>
+                      )}
+
                       {!config.conAutor && coautores.length > 0 && (
                         <p className="mt-1 text-xs text-muted sm:truncate">
                           Coautores:{" "}
@@ -497,6 +531,19 @@ function ListadoArticulos({ modo = "todos" }) {
                         {estado.etiqueta}
                       </span>
                     </div>
+
+                    {sesion?.rolActivo === "COMITE" &&
+                      art.evaluadores_asignados !== undefined && (
+                        <span
+                          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold ${
+                            art.evaluadores_asignados === 0
+                              ? "border-highlight bg-[#E6E49F]/35 text-fg"
+                              : "border-line bg-soft/40 text-muted"
+                          }`}
+                        >
+                          {art.evaluadores_asignados}/3 evaluadores
+                        </span>
+                      )}
 
                     {modo === "propios" && (
                       <div className="relative z-10 flex flex-wrap gap-2">

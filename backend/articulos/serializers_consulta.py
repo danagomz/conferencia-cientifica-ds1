@@ -37,3 +37,16 @@ class ArticuloListadoSerializer(serializers.ModelSerializer):
             }
             for a in articulo.autores.all()
         ]
+
+
+class ArticuloListadoConEvaluadoresSerializer(ArticuloListadoSerializer):
+    """Listado para administrador y comité (HU-015, CA-099): suma cuántos evaluadores tiene.
+
+    El valor viene de la anotación `evaluadores_asignados` que agrega la vista. Los autores
+    no usan este serializador: no deben ver cuántos evaluadores tiene su artículo.
+    """
+
+    evaluadores_asignados = serializers.IntegerField(read_only=True)
+
+    class Meta(ArticuloListadoSerializer.Meta):
+        fields = ArticuloListadoSerializer.Meta.fields + ['evaluadores_asignados']

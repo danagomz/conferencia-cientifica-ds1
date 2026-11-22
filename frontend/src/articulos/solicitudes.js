@@ -42,6 +42,9 @@ export async function listarArticulos(token, filtros = {}) {
   const params = {};
   if (filtros.idLinea) params.id_linea = filtros.idLinea;
   if (filtros.estado) params.estado = filtros.estado;
+  if (filtros.sinEvaluadores) {
+    params.sin_evaluadores = "true";
+  }
 
   let respuesta;
 
@@ -487,5 +490,186 @@ export async function actualizarArticulo(token, idArticulo, datos) {
   } catch (error) {
     if (!axios.isAxiosError(error)) throw error;
     throw crearErrorEdicion(error, "actualizar el artículo");
+  }
+}
+
+export async function obtenerCandidatosEvaluadores(token, idArticulo) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar candidatos");
+  }
+
+  if (!idArticulo) {
+    throw new Error("No se indicó el artículo");
+  }
+
+  try {
+    const respuesta = await axios.get(
+      `${URL_ARTICULOS}${idArticulo}/evaluadores/candidatos/`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!respuesta.data || typeof respuesta.data !== "object") {
+      throw new Error("El servidor devolvió candidatos inválidos");
+    }
+
+    return {
+      articulo: respuesta.data.articulo ?? null,
+      evaluadoresRequeridos: respuesta.data.evaluadores_requeridos ?? 3,
+      evaluadores: Array.isArray(respuesta.data.evaluadores)
+        ? respuesta.data.evaluadores
+        : [],
+    };
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+
+    const estado = error.response?.status;
+    const detalle =
+      error.response?.data?.detail || error.response?.data?.message;
+
+    if (estado === 401) {
+      throw new Error("Su sesión caducó. Inicie sesión nuevamente", {
+        cause: error,
+      });
+    }
+
+    if (estado === 403) {
+      throw new Error(
+        detalle || "Solo los miembros del comité pueden consultar candidatos",
+        { cause: error },
+      );
+    }
+
+    if (estado === 404) {
+      throw new Error(detalle || "El artículo no existe o no está disponible", {
+        cause: error,
+      });
+    }
+
+    throw new Error(detalle || "No fue posible consultar los candidatos", {
+      cause: error,
+    });
+  }
+}
+
+export async function asignarEvaluadores(token, idArticulo, idsEvaluadores) {
+  if (!token) {
+    throw new Error("Inicie sesión para asignar evaluadores");
+  }
+
+  if (!idArticulo) {
+    throw new Error("No se indicó el artículo");
+  }
+
+  try {
+    const respuesta = await axios.post(
+      `${URL_ARTICULOS}${idArticulo}/evaluadores/`,
+      {
+        evaluadores: idsEvaluadores,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return respuesta.data;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+
+    const datos = error.response?.data;
+    const estado = error.response?.status;
+
+    let mensaje =
+      datos?.detail ||
+      datos?.message ||
+      "No fue posible asignar los evaluadores";
+
+    if (datos?.plazo) {
+      mensaje = Array.isArray(datos.plazo) ? datos.plazo[0] : datos.plazo;
+    }
+
+    if (datos?.evaluadores) {
+      mensaje = Array.isArray(datos.evaluadores)
+        ? datos.evaluadores[0]
+        : datos.evaluadores;
+    }
+
+    if (estado === 401) {
+      mensaje = "Su sesión caducó. Inicie sesión nuevamente";
+    }
+
+    if (estado === 403) {
+      mensaje = datos?.detail || "No tiene permiso para asignar evaluadores";
+    }
+
+    if (estado === 404) {
+      mensaje = datos?.detail || "El artículo no existe o no está disponible";
+    }
+
+    throw new Error(mensaje, { cause: error });
+  }
+}
+export async function obtenerEvaluadoresAsignados(token, idArticulo) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar evaluadores");
+  }
+
+  if (!idArticulo) {
+    throw new Error("No se indicó el artículo");
+  }
+
+  try {
+    const respuesta = await axios.get(
+      `${URL_ARTICULOS}${idArticulo}/evaluadores/`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return {
+      articulo: respuesta.data.articulo ?? null,
+      evaluadoresRequeridos: respuesta.data.evaluadores_requeridos ?? 3,
+      total: respuesta.data.total ?? 0,
+      evaluadores: Array.isArray(respuesta.data.evaluadores)
+        ? respuesta.data.evaluadores
+        : [],
+    };
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+
+    const estado = error.response?.status;
+    const detalle =
+      error.response?.data?.detail || error.response?.data?.message;
+
+    if (estado === 401) {
+      throw new Error("Su sesión caducó. Inicie sesión nuevamente", {
+        cause: error,
+      });
+    }
+
+    if (estado === 403) {
+      throw new Error(
+        detalle ||
+          "Solo el administrador y el comité pueden consultar evaluadores",
+        { cause: error },
+      );
+    }
+
+    if (estado === 404) {
+      throw new Error(detalle || "El artículo no existe o no está disponible", {
+        cause: error,
+      });
+    }
+
+    throw new Error(detalle || "No fue posible consultar los evaluadores", {
+      cause: error,
+    });
   }
 }

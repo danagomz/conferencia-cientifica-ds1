@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Count, Q
 from rest_framework import serializers
 
 from conferencias.models import LineaTematica
@@ -91,3 +91,28 @@ def criterios_de_filtrado():
             {'parametro': 'q', 'etiqueta': 'Buscar por título o palabras clave'},
         ],
     }
+
+
+VALORES_VERDADEROS = ('true', '1', 'si', 'sí')
+VALORES_FALSOS = ('false', '0', 'no')
+
+
+def anotar_evaluadores_asignados(queryset):
+    """Agrega `evaluadores_asignados` (cantidad de evaluadores de cada artículo)."""
+    return queryset.annotate(
+        evaluadores_asignados=Count('asignaciones_evaluador', distinct=True)
+    )
+
+
+def aplicar_filtro_sin_evaluadores(queryset, params):
+    """HU-015, CA-099: `?sin_evaluadores=true` deja solo los artículos sin evaluadores.
+
+    Solo se llama para administrador y comité, y el queryset ya trae `evaluadores_asignados`.
+    `false` (o no enviarlo) no filtra.
+    """
+    valor = (params.get('sin_evaluadores') or '').strip().lower()
+    if not valor or valor in VALORES_FALSOS:
+        return queryset
+    if valor not in VALORES_VERDADEROS:
+        raise serializers.ValidationError({'sin_evaluadores': 'Debe ser true o false.'})
+    return queryset.filter(evaluadores_asignados=0)
