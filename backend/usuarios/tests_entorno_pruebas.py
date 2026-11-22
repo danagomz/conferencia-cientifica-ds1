@@ -33,7 +33,7 @@ class PrepararEntornoDePruebasTests(TestCase):
     def test_crea_conferencia_lineas_y_plazo_vigente(self):
         preparar()
         conferencia = Conferencia.objects.get(nombre='Congreso de Pruebas')
-        self.assertEqual(LineaTematica.objects.filter(id_conferencia=conferencia).count(), 4)
+        self.assertEqual(LineaTematica.objects.filter(id_conferencia=conferencia).count(), 5)
         plazo = Plazo.objects.get(id_conferencia=conferencia, tipo_plazo=Plazo.POSTULACION)
         from django.utils import timezone
         self.assertTrue(plazo.fecha_inicio <= timezone.now() <= plazo.fecha_fin)
@@ -43,7 +43,7 @@ class PrepararEntornoDePruebasTests(TestCase):
         preparar()
         self.assertEqual(User.objects.count(), 4)
         self.assertEqual(Conferencia.objects.count(), 2)
-        self.assertEqual(LineaTematica.objects.count(), 7)
+        self.assertEqual(LineaTematica.objects.count(), 8)
         self.assertEqual(Plazo.objects.count(), 6)
 
     def test_conferencia_qa_tiene_las_cinco_etapas_en_orden_y_tres_lineas(self):

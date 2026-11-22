@@ -12,10 +12,11 @@ from usuarios.models import PerfilUsuario
 from usuarios.roles import ADMIN, AUTOR, COMITE, asignar_roles
 
 LINEAS = [
-    ('Inteligencia artificial', 'Aprendizaje automático, redes neuronales y búsqueda.'),
-    ('Ingeniería de software', 'Procesos, arquitectura, pruebas y calidad del software.'),
-    ('Bases de datos', 'Modelado, consultas y gestión de grandes volúmenes de datos.'),
-    ('Ciberseguridad', 'Protección de sistemas, criptografía y gestión de riesgos.'),
+    ('Sistemas Inteligentes', 'Aprendizaje automático, redes neuronales, búsqueda y sistemas basados en conocimiento.'),
+    ('Tecnologías en Informática', 'Infraestructura, redes, bases de datos y tecnologías de la información.'),
+    ('Educación en Informática', 'Enseñanza y aprendizaje de la computación y la informática.'),
+    ('Sistemas de Software', 'Procesos, arquitectura, pruebas y calidad de los sistemas de software.'),
+    ('Software en la práctica', 'Experiencias, casos y aplicaciones del desarrollo de software en la industria.'),
 ]
 
 LINEAS_QA = [
@@ -87,7 +88,7 @@ class Command(BaseCommand):
         # El comité de pruebas tiene experiencia en dos líneas, para probar la selección por tema.
         comite = User.objects.get(username='comite@pruebas.co')
         for linea in LineaTematica.objects.filter(
-            id_conferencia=conferencia, nombre__in=[LINEAS[0][0], LINEAS[1][0]]
+            id_conferencia=conferencia, nombre__in=[LINEAS[0][0], LINEAS[3][0]]
         ):
             EvaluadorLinea.objects.get_or_create(id_usuario=comite, id_linea=linea)
         Plazo.objects.get_or_create(
