@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Marca } from "../../components/Marca";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
-import { obtenerCandidatosEvaluadores } from "../../articulos/solicitudes";
-
+import {
+  obtenerCandidatosEvaluadores,
+  obtenerEvaluadoresAsignados,
+  asignarEvaluadores,
+} from "../../articulos/solicitudes";
 export function AsignacionEvaluadores() {
   const { idArticulo } = useParams();
   const { sesion } = useAutenticacion();
@@ -14,6 +17,58 @@ export function AsignacionEvaluadores() {
   const [evaluadoresRequeridos, establecerEvaluadoresRequeridos] = useState(3);
   const [cargando, establecerCargando] = useState(true);
   const [error, establecerError] = useState("");
+
+  const [seleccionados, establecerSeleccionados] = useState([]);
+  const [guardando, establecerGuardando] = useState(false);
+  const [mensajeAsignacion, establecerMensajeAsignacion] = useState("");
+
+  function cambiarEvaluador(evaluador) {
+    establecerMensajeAsignacion("");
+
+    const yaSeleccionado = seleccionados.includes(evaluador.id);
+
+    if (yaSeleccionado) {
+      establecerSeleccionados((actuales) =>
+        actuales.filter((id) => id !== evaluador.id),
+      );
+      return;
+    }
+
+    if (seleccionados.length >= 3) {
+      establecerMensajeAsignacion(
+        "Un artículo debe tener exactamente tres evaluadores.",
+      );
+      return;
+    }
+
+    establecerSeleccionados((actuales) => [...actuales, evaluador.id]);
+  }
+
+  async function confirmarAsignacion() {
+    if (seleccionados.length !== 3) {
+      establecerMensajeAsignacion(
+        "Debes seleccionar exactamente tres evaluadores.",
+      );
+      return;
+    }
+
+    establecerGuardando(true);
+    establecerMensajeAsignacion("");
+
+    try {
+      await asignarEvaluadores(sesion.tokenAcceso, idArticulo, seleccionados);
+
+      establecerMensajeAsignacion("Evaluadores asignados correctamente.");
+    } catch (errorSolicitud) {
+      establecerMensajeAsignacion(
+        errorSolicitud instanceof Error
+          ? errorSolicitud.message
+          : "No fue posible asignar los evaluadores",
+      );
+    } finally {
+      establecerGuardando(false);
+    }
+  }
 
   useEffect(() => {
     let activo = true;
@@ -37,6 +92,32 @@ export function AsignacionEvaluadores() {
       })
       .finally(() => {
         if (activo) establecerCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [sesion?.tokenAcceso, idArticulo]);
+
+  useEffect(() => {
+    let activo = true;
+
+    obtenerEvaluadoresAsignados(sesion?.tokenAcceso, idArticulo)
+      .then((datos) => {
+        if (!activo) return;
+
+        establecerSeleccionados(
+          datos.evaluadores.map((evaluador) => evaluador.id),
+        );
+      })
+      .catch((errorSolicitud) => {
+        if (!activo) return;
+
+        establecerMensajeAsignacion(
+          errorSolicitud instanceof Error
+            ? errorSolicitud.message
+            : "No fue posible consultar evaluadores asignados",
+        );
       });
 
     return () => {
@@ -163,40 +244,67 @@ export function AsignacionEvaluadores() {
             </div>
           ) : (
             <div className="divide-y divide-line">
-              {evaluadoresFiltrados.map((evaluador) => (
-                <article
-                  key={evaluador.id}
-                  className="grid gap-3 px-5 py-5 transition-colors hover:bg-soft/50 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-fg">
-                      {evaluador.nombre}
-                    </p>
+              {evaluadoresFiltrados.map((evaluador) => {
+                const seleccionado = seleccionados.includes(evaluador.id);
 
-                    <p className="mt-1 text-sm text-muted">
-                      {evaluador.correo}
-                    </p>
+                return (
+                  <label
+                    key={evaluador.id}
+                    className={`grid cursor-pointer gap-3 px-5 py-5 transition-colors sm:grid-cols-[1fr_auto] sm:items-center ${
+                      seleccionado ? "bg-[#E6E49F]/30" : "hover:bg-soft/50"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-fg">
+                        {evaluador.nombre}
+                      </p>
 
-                    <p className="mt-2 text-xs text-muted">
-                      Artículos asignados: {evaluador.articulos_asignados ?? 0}
-                    </p>
+                      <p className="mt-1 text-sm text-muted">
+                        {evaluador.correo}
+                      </p>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {evaluador.institucion ? (
-                        <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg">
-                          {evaluador.institucion}
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs text-muted">
-                          Institución no registrada
-                        </span>
-                      )}
+                      <p className="mt-2 text-xs text-muted">
+                        Institución: {evaluador.institucion || "No registrada"}
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted">
+                        Artículos asignados:{" "}
+                        {evaluador.articulos_asignados ?? 0}
+                      </p>
                     </div>
-                  </div>
-                </article>
-              ))}
+
+                    <input
+                      type="checkbox"
+                      checked={seleccionado}
+                      onChange={() => cambiarEvaluador(evaluador)}
+                      className="checkbox checkbox-sm rounded-none border-highlight"
+                      aria-label={`Seleccionar a ${evaluador.nombre}`}
+                    />
+                  </label>
+                );
+              })}
             </div>
           )}
+          <div className="border-t border-line px-5 py-5">
+            <p className="mb-4 text-sm text-muted">
+              Seleccionados: {seleccionados.length} de 3
+            </p>
+
+            {mensajeAsignacion && (
+              <p role="status" className="mb-4 text-sm font-semibold text-fg">
+                {mensajeAsignacion}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={confirmarAsignacion}
+              disabled={guardando || seleccionados.length !== 3}
+              className="btn min-h-12 rounded-none bg-brand px-5 font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {guardando ? "Guardando..." : "Asignar evaluadores"}
+            </button>
+          </div>
         </section>
       </main>
     </div>

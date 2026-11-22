@@ -106,15 +106,6 @@ export function InicioRol({ rol }) {
           </div>
         )}
 
-        {rol === "COMITE" && (
-          <Link
-            to="/gestion/evaluadores/asignar"
-            className="inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
-          >
-            Asignar evaluadores
-          </Link>
-        )}
-
         <h2 className="mt-10 font-display text-xl font-bold">
           Disponible para este rol
         </h2>
