@@ -193,3 +193,41 @@ class AsignacionEvaluador(models.Model):
 
     def __str__(self):
         return f"{self.id_articulo.titulo} - {self.id_evaluador.email}"
+
+
+class EvaluadorLinea(models.Model):
+    """Línea temática en la que un miembro del comité tiene experiencia (HU-015, SDGC-195).
+
+    Permite relacionar la línea temática de un artículo con las áreas de conocimiento de los
+    evaluadores (CA-105A). Corresponde a la entidad EVALUADOR_LINEA del modelo de datos.
+    """
+
+    id_evaluador_linea = models.AutoField(primary_key=True)
+
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column='id_usuario',
+        related_name='lineas_experiencia'
+    )
+
+    id_linea = models.ForeignKey(
+        'conferencias.LineaTematica',
+        on_delete=models.CASCADE,
+        db_column='id_linea',
+        related_name='evaluadores_con_experiencia'
+    )
+
+    class Meta:
+        db_table = 'evaluador_linea'
+        verbose_name = 'Línea de experiencia del evaluador'
+        verbose_name_plural = 'Líneas de experiencia de los evaluadores'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_usuario', 'id_linea'],
+                name='uq_linea_por_evaluador'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.id_usuario.email} - {self.id_linea.nombre}'
