@@ -15,6 +15,7 @@ from .permissions import EsAutor
 from .queries import consultar_articulos
 from .serializers import ArticuloCrearSerializer
 from .asignaciones import asociar_evaluadores
+from .restricciones_asignacion import validar_restricciones_asignacion
 from .serializers_asignaciones import AsignarEvaluadoresSerializer
 from usuarios.permissions import EsAdminOComite
 from .serializers_consulta import ArticuloListadoSerializer
@@ -156,6 +157,9 @@ class AsignarEvaluadoresView(APIView):
         serializer.is_valid(raise_exception=True)
 
         evaluadores = serializer.validated_data['evaluadores']
+
+        # SDGC-205: plazo, pertenencia al comité y autoría.
+        validar_restricciones_asignacion(articulo, evaluadores)
 
         asignaciones = asociar_evaluadores(
             articulo,
