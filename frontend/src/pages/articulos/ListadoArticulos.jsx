@@ -484,9 +484,13 @@ function ListadoArticulos({ modo = "todos" }) {
                         <Link
                           to={`/gestion/evaluadores/asignar/${art.id}`}
                           onClick={(evento) => evento.stopPropagation()}
-                          className="relative z-20 mt-2 inline-flex min-h-9 items-center rounded-md border border-highlight bg-panel px-3 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg"
+                          className="relative z-20 mt-2 inline-flex min-h-9 items-center rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg"
                         >
-                          Consultar miembros disponibles
+                          {art.evaluadores_asignados === 0
+                            ? "Asignar evaluadores"
+                            : art.evaluadores_asignados < 3
+                              ? "Completar evaluadores"
+                              : "Ver evaluadores asignados"}
                         </Link>
                       )}
 

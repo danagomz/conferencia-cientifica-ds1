@@ -11,7 +11,6 @@ export function AsignacionEvaluadores() {
   const { idArticulo } = useParams();
   const { sesion } = useAutenticacion();
 
-  const [busqueda, establecerBusqueda] = useState("");
   const [articulo, establecerArticulo] = useState(null);
   const [evaluadores, establecerEvaluadores] = useState([]);
   const [evaluadoresRequeridos, establecerEvaluadoresRequeridos] = useState(3);
@@ -125,14 +124,7 @@ export function AsignacionEvaluadores() {
     };
   }, [sesion?.tokenAcceso, idArticulo]);
 
-  const evaluadoresFiltrados = evaluadores.filter((evaluador) => {
-    const texto = [evaluador.nombre, evaluador.correo, evaluador.institucion]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return texto.includes(busqueda.trim().toLowerCase());
-  });
+  const evaluadoresFiltrados = evaluadores;
 
   return (
     <div className="min-h-dvh bg-page font-sans text-fg">
@@ -141,7 +133,7 @@ export function AsignacionEvaluadores() {
           <Marca compacta />
 
           <span className="hidden text-xs font-medium text-muted sm:inline">
-            Miembros del comité
+            Asignación de evaluadores
           </span>
         </div>
       </header>
@@ -149,24 +141,45 @@ export function AsignacionEvaluadores() {
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <nav
           aria-label="Migas de pan"
-          className="mb-6 flex flex-wrap items-center gap-2 text-sm"
+          className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-muted"
         >
           <Link
-            to="/comite"
-            className="inline-flex min-h-10 items-center rounded-lg border border-line bg-panel px-3 font-semibold transition-colors hover:border-highlight hover:bg-[#E6E49F]/35"
+            to="/gestion/articulos"
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-fg"
           >
-            Panel de comité
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="h-3.5 w-3.5"
+            >
+              <path
+                d="M2 5.5A1.5 1.5 0 0 1 3.5 4h3l1.5 1.5h5A1.5 1.5 0 0 1 14.5 7v5.5A1.5 1.5 0 0 1 13 14H3.5A1.5 1.5 0 0 1 2 12.5v-7Z"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Artículos
           </Link>
 
-          <span aria-hidden="true" className="text-muted">
-            /
-          </span>
-
-          <span
-            aria-current="page"
-            className="inline-flex min-h-10 items-center rounded-lg bg-soft px-3 font-bold"
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            fill="none"
+            className="h-3 w-3 text-line"
           >
-            Miembros del comité
+            <path
+              d="M6 4l4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+
+          <span aria-current="page" className="font-medium text-fg">
+            Asignar evaluadores
           </span>
         </nav>
 
@@ -176,12 +189,12 @@ export function AsignacionEvaluadores() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand">
-            Miembros disponibles
+            Asignar evaluadores
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Consulta los miembros disponibles del comité, su institución y su
-            carga actual.{" "}
+            Selecciona tres evaluadores para el artículo según su línea temática
+            y su carga actual.
           </p>
         </section>
 
@@ -203,26 +216,6 @@ export function AsignacionEvaluadores() {
               </p>
             </div>
           )}
-
-          <div className="border-b border-line px-5 py-4 sm:px-6">
-            <label
-              htmlFor="buscar-miembro-comite"
-              className="mb-2 block text-xs font-bold uppercase tracking-wider text-fg"
-            >
-              Buscar miembro
-            </label>
-
-            {/* Aquí continúa tu input de búsqueda */}
-
-            <input
-              id="buscar-miembro-comite"
-              type="search"
-              value={busqueda}
-              onChange={(evento) => establecerBusqueda(evento.target.value)}
-              placeholder="Nombre, correo o institución"
-              className="input input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none placeholder:text-muted/80 focus:border-brand focus:ring-4 focus:ring-highlight/25"
-            />
-          </div>
 
           {cargando ? (
             <div role="status" className="px-6 py-16 text-center">
@@ -251,10 +244,14 @@ export function AsignacionEvaluadores() {
                   <label
                     key={evaluador.id}
                     className={`grid cursor-pointer gap-3 px-5 py-5 transition-colors sm:grid-cols-[1fr_auto] sm:items-center ${
-                      seleccionado ? "bg-[#E6E49F]/30" : "hover:bg-soft/50"
+                      seleccionado
+                        ? "bg-[#E6E49F]/30"
+                        : evaluador.coincide_linea_tematica
+                          ? "bg-brand/5 hover:bg-[#E6E49F]/20"
+                          : "hover:bg-soft/50"
                     }`}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-bold text-fg">
                         {evaluador.nombre}
                       </p>
@@ -271,6 +268,32 @@ export function AsignacionEvaluadores() {
                         Artículos asignados:{" "}
                         {evaluador.articulos_asignados ?? 0}
                       </p>
+                      {evaluador.coincide_linea_tematica ? (
+                        <span className="mt-3 inline-flex rounded-full border border-highlight bg-panel px-3 py-1 text-xs font-bold text-highlight">
+                          Coincide con la línea temática
+                        </span>
+                      ) : (
+                        <span className="mt-3 inline-flex rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-muted">
+                          Línea temática diferente
+                        </span>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(evaluador.lineas_tematicas ?? []).length > 0 ? (
+                          evaluador.lineas_tematicas.map((linea) => (
+                            <span
+                              key={linea}
+                              className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg"
+                            >
+                              {linea}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs text-muted">
+                            Sin áreas registradas
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <input
