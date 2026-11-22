@@ -1,13 +1,52 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Marca } from "../../components/Marca";
-import { EVALUADORES_MOCK } from "../../evaluadores/datosMock";
+import { useAutenticacion } from "../../autenticacion/useAutenticacion";
+import { obtenerCandidatosEvaluadores } from "../../articulos/solicitudes";
 
 export function AsignacionEvaluadores() {
-  const [busqueda, establecerBusqueda] = useState("");
+  const { idArticulo } = useParams();
+  const { sesion } = useAutenticacion();
 
-  const evaluadoresFiltrados = EVALUADORES_MOCK.filter((evaluador) => {
-    const texto = [evaluador.nombre, evaluador.correo, ...evaluador.lineas]
+  const [busqueda, establecerBusqueda] = useState("");
+  const [articulo, establecerArticulo] = useState(null);
+  const [evaluadores, establecerEvaluadores] = useState([]);
+  const [evaluadoresRequeridos, establecerEvaluadoresRequeridos] = useState(3);
+  const [cargando, establecerCargando] = useState(true);
+  const [error, establecerError] = useState("");
+
+  useEffect(() => {
+    let activo = true;
+
+    obtenerCandidatosEvaluadores(sesion?.tokenAcceso, idArticulo)
+      .then((datos) => {
+        if (!activo) return;
+
+        establecerArticulo(datos.articulo);
+        establecerEvaluadores(datos.evaluadores);
+        establecerEvaluadoresRequeridos(datos.evaluadoresRequeridos);
+      })
+      .catch((errorSolicitud) => {
+        if (!activo) return;
+
+        establecerError(
+          errorSolicitud instanceof Error
+            ? errorSolicitud.message
+            : "No fue posible consultar los candidatos",
+        );
+      })
+      .finally(() => {
+        if (activo) establecerCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [sesion?.tokenAcceso, idArticulo]);
+
+  const evaluadoresFiltrados = evaluadores.filter((evaluador) => {
+    const texto = [evaluador.nombre, evaluador.correo, evaluador.institucion]
+      .filter(Boolean)
       .join(" ")
       .toLowerCase();
 
@@ -60,11 +99,30 @@ export function AsignacionEvaluadores() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Consulta los miembros del comité y sus líneas de conocimiento.
+            Consulta los miembros disponibles del comité, su institución y su
+            carga actual.{" "}
           </p>
         </section>
 
         <section className="border border-line bg-panel shadow-sm">
+          {articulo && (
+            <div className="border-b border-line bg-soft/30 px-5 py-4 sm:px-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                Artículo seleccionado
+              </p>
+
+              <p className="mt-1 font-semibold text-fg">{articulo.titulo}</p>
+
+              <p className="mt-1 text-xs text-muted">
+                Línea temática: {articulo.linea_tematica}
+              </p>
+
+              <p className="mt-1 text-xs text-muted">
+                Evaluadores requeridos: {evaluadoresRequeridos}
+              </p>
+            </div>
+          )}
+
           <div className="border-b border-line px-5 py-4 sm:px-6">
             <label
               htmlFor="buscar-miembro-comite"
@@ -73,17 +131,27 @@ export function AsignacionEvaluadores() {
               Buscar miembro
             </label>
 
+            {/* Aquí continúa tu input de búsqueda */}
+
             <input
               id="buscar-miembro-comite"
               type="search"
               value={busqueda}
               onChange={(evento) => establecerBusqueda(evento.target.value)}
-              placeholder="Nombre, correo o línea temática"
+              placeholder="Nombre, correo o institución"
               className="input input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none placeholder:text-muted/80 focus:border-brand focus:ring-4 focus:ring-highlight/25"
             />
           </div>
 
-          {evaluadoresFiltrados.length === 0 ? (
+          {cargando ? (
+            <div role="status" className="px-6 py-16 text-center">
+              <div className="mx-auto h-8 w-64 animate-pulse rounded bg-soft" />
+            </div>
+          ) : error ? (
+            <div role="alert" className="px-6 py-16 text-center">
+              <p className="text-sm font-semibold text-fg">{error}</p>
+            </div>
+          ) : evaluadoresFiltrados.length === 0 ? (
             <div role="status" className="px-6 py-16 text-center">
               <p className="text-sm font-semibold text-fg">
                 No se encontraron miembros del comité
@@ -109,21 +177,22 @@ export function AsignacionEvaluadores() {
                       {evaluador.correo}
                     </p>
 
+                    <p className="mt-2 text-xs text-muted">
+                      Artículos asignados: {evaluador.articulos_asignados ?? 0}
+                    </p>
+
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {evaluador.lineas.map((linea) => (
-                        <span
-                          key={linea}
-                          className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg"
-                        >
-                          {linea}
+                      {evaluador.institucion ? (
+                        <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg">
+                          {evaluador.institucion}
                         </span>
-                      ))}
+                      ) : (
+                        <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs text-muted">
+                          Institución no registrada
+                        </span>
+                      )}
                     </div>
                   </div>
-
-                  <span className="w-fit rounded-full border border-highlight bg-panel px-3 py-1 text-xs font-bold text-highlight">
-                    Miembro del comité
-                  </span>
                 </article>
               ))}
             </div>

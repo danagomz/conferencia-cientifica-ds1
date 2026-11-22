@@ -209,7 +209,7 @@ function Aplicacion() {
               element={<PaginaEditarArticulo />}
             />
             <Route
-              path="/gestion/evaluadores/asignar"
+              path="/gestion/evaluadores/asignar/:idArticulo"
               element={<PaginaAsignacionEvaluadores />}
             />
             {Object.entries(ROLES_DISPONIBLES).map(([rol, informacion]) => (

@@ -489,3 +489,65 @@ export async function actualizarArticulo(token, idArticulo, datos) {
     throw crearErrorEdicion(error, "actualizar el artículo");
   }
 }
+
+export async function obtenerCandidatosEvaluadores(token, idArticulo) {
+  if (!token) {
+    throw new Error("Inicie sesión para consultar candidatos");
+  }
+
+  if (!idArticulo) {
+    throw new Error("No se indicó el artículo");
+  }
+
+  try {
+    const respuesta = await axios.get(
+      `${URL_ARTICULOS}${idArticulo}/evaluadores/candidatos/`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!respuesta.data || typeof respuesta.data !== "object") {
+      throw new Error("El servidor devolvió candidatos inválidos");
+    }
+
+    return {
+      articulo: respuesta.data.articulo ?? null,
+      evaluadoresRequeridos: respuesta.data.evaluadores_requeridos ?? 3,
+      evaluadores: Array.isArray(respuesta.data.evaluadores)
+        ? respuesta.data.evaluadores
+        : [],
+    };
+  } catch (error) {
+    if (!axios.isAxiosError(error)) throw error;
+
+    const estado = error.response?.status;
+    const detalle =
+      error.response?.data?.detail || error.response?.data?.message;
+
+    if (estado === 401) {
+      throw new Error("Su sesión caducó. Inicie sesión nuevamente", {
+        cause: error,
+      });
+    }
+
+    if (estado === 403) {
+      throw new Error(
+        detalle || "Solo los miembros del comité pueden consultar candidatos",
+        { cause: error },
+      );
+    }
+
+    if (estado === 404) {
+      throw new Error(detalle || "El artículo no existe o no está disponible", {
+        cause: error,
+      });
+    }
+
+    throw new Error(detalle || "No fue posible consultar los candidatos", {
+      cause: error,
+    });
+  }
+}
