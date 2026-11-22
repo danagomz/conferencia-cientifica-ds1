@@ -7,7 +7,9 @@ from .views import (
     ArticuloFiltrosView,
     ArticuloVersionCrearView,
     ArticulosPropiosView,
+    AsignarEvaluadoresView,
 )
+from .seleccion_evaluadores import CandidatosEvaluadoresView
 
 urlpatterns = [
     path('articulos/contexto/', ArticuloContextoView.as_view(), name='articulo-contexto'),
@@ -19,5 +21,15 @@ urlpatterns = [
         'articulos/<int:pk>/versiones/',
         ArticuloVersionCrearView.as_view(),
         name='articulo-version-crear',
+    ),
+    path(
+        'articulos/<int:pk>/evaluadores/candidatos/',
+        CandidatosEvaluadoresView.as_view(),
+        name='articulo-candidatos-evaluadores',
+    ),
+    path(
+        'articulos/<int:pk>/evaluadores/',
+        AsignarEvaluadoresView.as_view(),
+        name='articulo-asignar-evaluadores',
     ),
 ]

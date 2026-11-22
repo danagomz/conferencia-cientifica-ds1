@@ -22,6 +22,10 @@ from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 from .permisos_modificacion import PuedeModificarArticulo
 from .serializers import ArticuloCrearSerializer, ArticuloActualizarSerializer
+from .asignaciones import asociar_evaluadores
+from .restricciones_asignacion import validar_restricciones_asignacion
+from .serializers_asignaciones import AsignarEvaluadoresSerializer
+from usuarios.permissions import EsAdminOComite
 from .storage import subir_pdf_articulo
 from .validacion_pdf import validar_archivo_pdf
 from storage3.utils import StorageException
@@ -251,6 +255,47 @@ class ArticuloVersionCrearView(APIView):
                 'numero_version': version.numero_version,
                 'tipo_version': version.tipo_version,
                 'nombre_archivo': version.nombre_archivo,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AsignarEvaluadoresView(APIView):
+    """POST /api/articulos/<id>/evaluadores/ - registra evaluadores (SDGC-199)."""
+
+    permission_classes = [EsAdminOComite]
+
+    def post(self, request, pk):
+        articulo = consultar_articulos().filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+
+        serializer = AsignarEvaluadoresSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        evaluadores = serializer.validated_data['evaluadores']
+
+        # SDGC-205: plazo, pertenencia al comité y autoría.
+        validar_restricciones_asignacion(articulo, evaluadores)
+
+        asignaciones = asociar_evaluadores(
+            articulo,
+            evaluadores,
+            request.user,
+        )
+
+        return Response(
+            {
+                'mensaje': 'Evaluadores asignados correctamente.',
+                'articulo': articulo.pk,
+                'evaluadores': [
+                    {
+                        'id_asignacion': asignacion.id_asignacion,
+                        'id_evaluador': asignacion.id_evaluador_id,
+                    }
+                    for asignacion in asignaciones
+                ],
             },
             status=status.HTTP_201_CREATED,
         )
