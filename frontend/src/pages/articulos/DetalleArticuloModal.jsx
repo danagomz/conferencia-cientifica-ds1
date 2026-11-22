@@ -181,6 +181,38 @@ function EstadoDetalle({ cargando, error, articulo }) {
       </section>
 
       <section className="mt-8">
+        <h3 className="text-lg font-bold text-fg">Evaluadores asignados</h3>
+
+        {Array.isArray(articulo.evaluadores_asignados) &&
+        articulo.evaluadores_asignados.length > 0 ? (
+          <div className="mt-3 divide-y divide-line border-y border-line">
+            {articulo.evaluadores_asignados.map((evaluador, indice) => (
+              <article
+                key={
+                  evaluador.id ??
+                  evaluador.correo ??
+                  `${evaluador.nombre}-${indice}`
+                }
+                className="px-4 py-4"
+              >
+                <p className="font-semibold text-fg">
+                  {evaluador.nombre || "Evaluador"}
+                </p>
+
+                {evaluador.correo && (
+                  <p className="mt-1 text-sm text-muted">{evaluador.correo}</p>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted">
+            Este artículo todavía no tiene evaluadores asignados.
+          </p>
+        )}
+      </section>
+
+      <section className="mt-8">
         <h3 className="text-lg font-bold text-fg">Versiones y documentos</h3>
         <div className="mt-3">
           <ListaVersiones versiones={articulo.versiones} />

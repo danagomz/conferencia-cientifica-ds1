@@ -1,74 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Marca } from "../../components/Marca";
-import {
-  ARTICULOS_PENDIENTES_MOCK,
-  EVALUADORES_MOCK,
-} from "../../evaluadores/datosMock";
+import { EVALUADORES_MOCK } from "../../evaluadores/datosMock";
 
 export function AsignacionEvaluadores() {
-  const [articuloSeleccionado, establecerArticuloSeleccionado] = useState(
-    ARTICULOS_PENDIENTES_MOCK[0],
-  );
+  const [busqueda, establecerBusqueda] = useState("");
 
-  const [evaluadoresSeleccionados, establecerEvaluadoresSeleccionados] =
-    useState([]);
+  const evaluadoresFiltrados = EVALUADORES_MOCK.filter((evaluador) => {
+    const texto = [evaluador.nombre, evaluador.correo, ...evaluador.lineas]
+      .join(" ")
+      .toLowerCase();
 
-  const [mensaje, establecerMensaje] = useState("");
-  const [guardado, establecerGuardado] = useState(false);
-
-  function cambiarArticulo(articulo) {
-    establecerArticuloSeleccionado(articulo);
-    establecerEvaluadoresSeleccionados([]);
-    establecerMensaje("");
-    establecerGuardado(false);
-  }
-
-  function cambiarEvaluador(evaluador) {
-    establecerGuardado(false);
-    establecerMensaje("");
-
-    const seleccionado = evaluadoresSeleccionados.some(
-      (item) => item.id === evaluador.id,
-    );
-
-    if (seleccionado) {
-      establecerEvaluadoresSeleccionados((actuales) =>
-        actuales.filter((item) => item.id !== evaluador.id),
-      );
-      return;
-    }
-
-    if (evaluadoresSeleccionados.length >= 3) {
-      establecerMensaje("Un artículo debe tener exactamente tres evaluadores.");
-      return;
-    }
-
-    establecerEvaluadoresSeleccionados((actuales) => [...actuales, evaluador]);
-  }
-
-  function confirmarAsignacion() {
-    if (evaluadoresSeleccionados.length !== 3) {
-      establecerMensaje("Selecciona exactamente tres evaluadores.");
-      return;
-    }
-
-    const algunAutor = evaluadoresSeleccionados.some((evaluador) =>
-      articuloSeleccionado.autores.includes(evaluador.correo),
-    );
-
-    if (algunAutor) {
-      establecerMensaje(
-        "Un autor no puede ser evaluador de su propio artículo.",
-      );
-      return;
-    }
-
-    establecerMensaje(
-      "Asignación preparada correctamente. Pendiente de integración con el servidor.",
-    );
-    establecerGuardado(true);
-  }
+    return texto.includes(busqueda.trim().toLowerCase());
+  });
 
   return (
     <div className="min-h-dvh bg-page font-sans text-fg">
@@ -77,7 +21,7 @@ export function AsignacionEvaluadores() {
           <Marca compacta />
 
           <span className="hidden text-xs font-medium text-muted sm:inline">
-            Asignación de evaluadores
+            Miembros del comité
           </span>
         </div>
       </header>
@@ -102,7 +46,7 @@ export function AsignacionEvaluadores() {
             aria-current="page"
             className="inline-flex min-h-10 items-center rounded-lg bg-soft px-3 font-bold"
           >
-            Asignar evaluadores
+            Miembros del comité
           </span>
         </nav>
 
@@ -112,169 +56,79 @@ export function AsignacionEvaluadores() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand">
-            Asignar evaluadores
+            Miembros disponibles
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Selecciona tres evaluadores pertenecientes al comité según la línea
-            temática del artículo.
+            Consulta los miembros del comité y sus líneas de conocimiento.
           </p>
         </section>
 
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
-          <section
-            aria-labelledby="articulos-pendientes"
-            className="border border-line bg-panel"
-          >
-            <div className="border-b border-line px-5 py-4">
-              <h2 id="articulos-pendientes" className="font-bold text-fg">
-                Artículos pendientes
-              </h2>
-            </div>
+        <section className="border border-line bg-panel shadow-sm">
+          <div className="border-b border-line px-5 py-4 sm:px-6">
+            <label
+              htmlFor="buscar-miembro-comite"
+              className="mb-2 block text-xs font-bold uppercase tracking-wider text-fg"
+            >
+              Buscar miembro
+            </label>
 
-            <div className="divide-y divide-line">
-              {ARTICULOS_PENDIENTES_MOCK.map((articulo) => {
-                const seleccionado = articuloSeleccionado.id === articulo.id;
+            <input
+              id="buscar-miembro-comite"
+              type="search"
+              value={busqueda}
+              onChange={(evento) => establecerBusqueda(evento.target.value)}
+              placeholder="Nombre, correo o línea temática"
+              className="input input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none placeholder:text-muted/80 focus:border-brand focus:ring-4 focus:ring-highlight/25"
+            />
+          </div>
 
-                return (
-                  <button
-                    key={articulo.id}
-                    type="button"
-                    onClick={() => cambiarArticulo(articulo)}
-                    className={`w-full px-5 py-5 text-left transition-colors ${
-                      seleccionado ? "bg-[#E6E49F]/30" : "hover:bg-soft/60"
-                    }`}
-                  >
-                    <p className="text-sm font-bold leading-5 text-fg">
-                      {articulo.titulo}
-                    </p>
+          {evaluadoresFiltrados.length === 0 ? (
+            <div role="status" className="px-6 py-16 text-center">
+              <p className="text-sm font-semibold text-fg">
+                No se encontraron miembros del comité
+              </p>
 
-                    <p className="mt-2 text-xs text-muted">
-                      Línea temática: {articulo.linea}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section
-            aria-labelledby="evaluadores-disponibles"
-            className="min-w-0 border border-line bg-panel"
-          >
-            <div className="border-b border-line px-5 py-4">
-              <h2 id="evaluadores-disponibles" className="font-bold text-fg">
-                Evaluadores disponibles
-              </h2>
-
-              <p className="mt-1 text-xs text-muted">
-                Seleccionados: {evaluadoresSeleccionados.length} de 3
+              <p className="mt-2 text-xs text-muted">
+                Cambia el criterio de búsqueda.
               </p>
             </div>
-
-            {articuloSeleccionado && (
-              <div className="border-b border-line bg-soft/30 px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">
-                  Artículo seleccionado
-                </p>
-                <p className="mt-1 font-semibold text-fg">
-                  {articuloSeleccionado.titulo}
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  Línea: {articuloSeleccionado.linea}
-                </p>
-              </div>
-            )}
-
+          ) : (
             <div className="divide-y divide-line">
-              {EVALUADORES_MOCK.map((evaluador) => {
-                const seleccionado = evaluadoresSeleccionados.some(
-                  (item) => item.id === evaluador.id,
-                );
-
-                const coincide = evaluador.lineas.includes(
-                  articuloSeleccionado.linea,
-                );
-
-                const esAutor = articuloSeleccionado.autores.includes(
-                  evaluador.correo,
-                );
-
-                const deshabilitado =
-                  seleccionado === false &&
-                  evaluadoresSeleccionados.length >= 3;
-
-                return (
-                  <label
-                    key={evaluador.id}
-                    className={`grid cursor-pointer gap-3 px-5 py-4 transition-colors sm:grid-cols-[1fr_auto] sm:items-center ${
-                      seleccionado ? "bg-[#E6E49F]/25" : "hover:bg-soft/50"
-                    } ${deshabilitado ? "opacity-60" : ""}`}
-                  >
-                    <div>
-                      <p className="text-sm font-bold text-fg">
-                        {evaluador.nombre}
-                      </p>
-
-                      <p className="mt-1 text-xs text-muted">
-                        {evaluador.correo}
-                      </p>
-
-                      <p className="mt-2 text-xs text-muted">
-                        Áreas: {evaluador.lineas.join(", ")}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {coincide && (
-                        <span className="rounded-full border border-highlight bg-panel px-3 py-1 text-xs font-semibold text-highlight">
-                          Coincide con la línea
-                        </span>
-                      )}
-
-                      {esAutor && (
-                        <span className="rounded-full border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">
-                          Es autor
-                        </span>
-                      )}
-
-                      <input
-                        type="checkbox"
-                        checked={seleccionado}
-                        disabled={deshabilitado || esAutor}
-                        onChange={() => cambiarEvaluador(evaluador)}
-                        className="checkbox checkbox-sm rounded-none border-highlight"
-                        aria-label={`Seleccionar a ${evaluador.nombre}`}
-                      />
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-line px-5 py-5">
-              {mensaje && (
-                <p
-                  role="status"
-                  className={`mb-4 text-sm ${
-                    guardado ? "text-brand" : "text-red-800"
-                  }`}
+              {evaluadoresFiltrados.map((evaluador) => (
+                <article
+                  key={evaluador.id}
+                  className="grid gap-3 px-5 py-5 transition-colors hover:bg-soft/50 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6"
                 >
-                  {mensaje}
-                </p>
-              )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-fg">
+                      {evaluador.nombre}
+                    </p>
 
-              <button
-                type="button"
-                onClick={confirmarAsignacion}
-                disabled={evaluadoresSeleccionados.length !== 3}
-                className="btn min-h-12 rounded-none bg-brand px-5 font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Confirmar asignación
-              </button>
+                    <p className="mt-1 text-sm text-muted">
+                      {evaluador.correo}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {evaluador.lineas.map((linea) => (
+                        <span
+                          key={linea}
+                          className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg"
+                        >
+                          {linea}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <span className="w-fit rounded-full border border-highlight bg-panel px-3 py-1 text-xs font-bold text-highlight">
+                    Miembro del comité
+                  </span>
+                </article>
+              ))}
             </div>
-          </section>
-        </div>
+          )}
+        </section>
       </main>
     </div>
   );
