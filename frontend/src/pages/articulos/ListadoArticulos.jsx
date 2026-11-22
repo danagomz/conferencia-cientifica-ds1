@@ -32,7 +32,7 @@ const MODOS = {
 };
 
 const COLUMNAS_CON_AUTOR = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
-const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_190px_110px_220px]";
+const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_170px_110px_150px_250px]";
 
 function formatearFecha(valor) {
   const fecha = new Date(valor.length === 10 ? `${valor}T00:00:00` : valor);
@@ -43,7 +43,7 @@ function formatearFecha(valor) {
   });
 }
 
-function FilasEsqueleto({ columnas, conAutor }) {
+function FilasEsqueleto({ columnas, conAutor, conAcciones }) {
   return (
     <div role="status" className="divide-y divide-line bg-panel">
       <span className="sr-only">Cargando artículos…</span>
@@ -60,6 +60,9 @@ function FilasEsqueleto({ columnas, conAutor }) {
           <div className="h-5 w-36 animate-pulse rounded bg-soft" />
           <div className="h-4 w-20 animate-pulse rounded bg-soft" />
           <div className="h-5 w-20 animate-pulse rounded bg-soft" />
+          {conAcciones && (
+            <div className="h-7 w-24 animate-pulse rounded bg-soft" />
+          )}
         </div>
       ))}
     </div>
@@ -392,11 +395,16 @@ function ListadoArticulos({ modo = "todos" }) {
             <span>Línea Temática</span>
             <span>Fecha</span>
             <span>Estado</span>
+                        {modo === "propios" && <span>Acciones</span>}
           </div>
 
           {/* Cuerpo: carga, error, vacío o filas */}
           {cargando ? (
-            <FilasEsqueleto columnas={columnas} conAutor={config.conAutor} />
+            <FilasEsqueleto
+              columnas={columnas}
+              conAutor={config.conAutor}
+              conAcciones={modo === "propios"}
+            />
           ) : error ? (
             <div
               role="alert"
@@ -437,20 +445,20 @@ function ListadoArticulos({ modo = "todos" }) {
                 );
 
                 return (
-                  <Link
+                  <div
                     key={art.id}
-                    to={`${ubicacion.pathname}?detalle=${art.id}`}
-                    aria-label={`Consultar detalle de ${art.titulo}`}
-                    title={`Consultar detalle de ${art.titulo}`}
-                    className={`group grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 outline-none transition-colors hover:bg-soft/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-highlight sm:items-center sm:gap-4 ${columnas}`}
+                    className={`group relative grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 focus-within:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
                   >
                     <div className="min-w-0">
-                      <span
-                        title={art.titulo}
-                        className="block min-w-0 text-sm font-semibold text-fg transition-colors group-hover:text-highlight sm:truncate"
+                      {/* Enlace estirado: toda la fila abre el detalle (CA existente). */}
+                      <Link
+                        to={`${ubicacion.pathname}?detalle=${art.id}`}
+                        aria-label={`Consultar detalle de ${art.titulo}`}
+                        title={`Consultar detalle de ${art.titulo}`}
+                        className="block min-w-0 text-sm font-semibold text-fg outline-none transition-colors after:absolute after:inset-0 group-hover:text-highlight focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-highlight sm:truncate"
                       >
                         {art.titulo}
-                      </span>
+                      </Link>
 
                       {!config.conAutor && coautores.length > 0 && (
                         <p className="mt-1 text-xs text-muted sm:truncate">
@@ -489,7 +497,26 @@ function ListadoArticulos({ modo = "todos" }) {
                         {estado.etiqueta}
                       </span>
                     </div>
-                  </Link>
+
+                    {modo === "propios" && (
+                      <div className="relative z-10 flex flex-wrap gap-2">
+                        <Link
+                          to={`/autor/articulos/${art.id}/editar`}
+                          aria-label={`Editar el artículo ${art.titulo}`}
+                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+                        >
+                          Editar
+                        </Link>
+                        <Link
+                          to={`/autor/articulos/${art.id}/versiones`}
+                          aria-label={`Gestionar versiones de ${art.titulo}`}
+                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+                        >
+                          Gestionar versiones
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

@@ -5,6 +5,7 @@ from .views import (
     ArticuloCrearView,
     ArticuloDetalleView,
     ArticuloFiltrosView,
+    ArticuloVersionCrearView,
     ArticulosPropiosView,
     AsignarEvaluadoresView,
 )
@@ -16,6 +17,11 @@ urlpatterns = [
     path('articulos/propios/', ArticulosPropiosView.as_view(), name='articulos-propios'),
     path('articulos/<int:pk>/', ArticuloDetalleView.as_view(), name='articulo-detalle'),
     path('articulos/', ArticuloCrearView.as_view(), name='articulo-crear'),
+    path(
+        'articulos/<int:pk>/versiones/',
+        ArticuloVersionCrearView.as_view(),
+        name='articulo-version-crear',
+    ),
     path(
         'articulos/<int:pk>/evaluadores/candidatos/',
         CandidatosEvaluadoresView.as_view(),
