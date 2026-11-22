@@ -22,7 +22,7 @@ from .serializers_detalle import ArticuloDetalleSerializer
 from .permisos_propios import PuedeConsultarArticulosPropios, articulos_propios
 from .permisos_modificacion import PuedeModificarArticulo
 from .serializers import ArticuloCrearSerializer, ArticuloActualizarSerializer
-from .asignaciones import asociar_evaluadores
+from .asignaciones import asignaciones_del_articulo, asociar_evaluadores
 from .restricciones_asignacion import validar_restricciones_asignacion
 from .serializers_asignaciones import AsignarEvaluadoresSerializer
 from usuarios.permissions import EsAdminOComite
@@ -261,9 +261,38 @@ class ArticuloVersionCrearView(APIView):
 
 
 class AsignarEvaluadoresView(APIView):
-    """POST /api/articulos/<id>/evaluadores/ - registra evaluadores (SDGC-199)."""
+    """/api/articulos/<id>/evaluadores/ - POST registra (SDGC-199) y GET consulta (SDGC-203) evaluadores."""
 
     permission_classes = [EsAdminOComite]
+
+    def get(self, request, pk):
+        """CA-104: evaluadores ya asignados al artículo (lista vacía si aún no tiene)."""
+        articulo = consultar_articulos().filter(pk=pk).first()
+
+        if articulo is None:
+            raise NotFound(MENSAJE_NO_DISPONIBLE)
+
+        asignaciones = asignaciones_del_articulo(articulo)
+        return Response(
+            {
+                'articulo': {'id': articulo.pk, 'titulo': articulo.titulo},
+                'evaluadores_requeridos': 3,
+                'total': len(asignaciones),
+                'evaluadores': [
+                    {
+                        'id': asignacion.id_evaluador_id,
+                        'nombre': (
+                            f'{asignacion.id_evaluador.first_name} '
+                            f'{asignacion.id_evaluador.last_name}'
+                        ).strip(),
+                        'correo': asignacion.id_evaluador.email,
+                        'id_asignacion': asignacion.id_asignacion,
+                        'fecha_asignacion': asignacion.fecha_asignacion,
+                    }
+                    for asignacion in asignaciones
+                ],
+            }
+        )
 
     def post(self, request, pk):
         articulo = consultar_articulos().filter(pk=pk).first()

@@ -34,3 +34,12 @@ def evaluadores_del_articulo(articulo):
         .select_related('id_evaluador')
         .order_by('id_asignacion')
     ]
+
+
+def asignaciones_del_articulo(articulo):
+    """Asignaciones del artículo, en el orden en que se registraron, con el evaluador cargado."""
+    return list(
+        AsignacionEvaluador.objects.filter(id_articulo=articulo)
+        .select_related('id_evaluador')
+        .order_by('id_asignacion')
+    )
