@@ -1,3 +1,4 @@
+
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -24,7 +25,9 @@ class FiltrarUsuariosTests(APITestCase):
         self.ana = crear('ana@x.co', 'Ana', 'Gómez', AUTOR)
         self.ana_ruiz = crear('anar@x.co', 'Ana', 'Ruiz', AUTOR)
         self.multi = crear('multi@x.co', 'Mario', 'Multi', ADMIN, AUTOR)
-        self.inactivo = crear('inactivo@x.co', 'Ana', 'Inactiva', AUTOR, activo=False)
+        self.inactivo = crear(
+            'inactivo@x.co', 'Ana', 'Inactiva', AUTOR, activo=False
+        )
         self.client.force_authenticate(self.admin)
 
     def buscar(self, **params):
@@ -36,22 +39,45 @@ class FiltrarUsuariosTests(APITestCase):
         self.assertEqual(len(self.buscar()), 5)
 
     def test_filtra_por_nombre(self):
-        self.assertEqual(self.buscar(nombre='ana'), {self.ana.id, self.ana_ruiz.id})
+        self.assertEqual(
+            self.buscar(nombre='ana'),
+            {self.ana.id, self.ana_ruiz.id},
+        )
 
     def test_filtra_por_apellido(self):
-        self.assertEqual(self.buscar(nombre='gómez'), {self.comite.id, self.ana.id})
+        self.assertEqual(
+            self.buscar(nombre='gómez'),
+            {self.comite.id, self.ana.id},
+        )
 
     def test_nombre_sin_importar_mayusculas(self):
-        self.assertEqual(self.buscar(nombre='ANA'), {self.ana.id, self.ana_ruiz.id})
+        self.assertEqual(
+            self.buscar(nombre='ANA'),
+            {self.ana.id, self.ana_ruiz.id},
+        )
 
     def test_nombre_completo_con_varias_palabras(self):
         self.assertEqual(self.buscar(nombre='ana gómez'), {self.ana.id})
 
     def test_filtra_por_rol(self):
-        self.assertEqual(self.buscar(rol='AUTOR'), {self.ana.id, self.ana_ruiz.id, self.multi.id})
+        self.assertEqual(
+            self.buscar(rol='AUTOR'),
+            {self.ana.id, self.ana_ruiz.id, self.multi.id},
+        )
 
     def test_rol_en_minusculas(self):
         self.assertEqual(self.buscar(rol='comite'), {self.comite.id})
+
+    def test_comite_puede_consultar_solo_los_miembros_del_comite(self):
+        self.client.force_authenticate(self.comite)
+
+        r = self.client.get(URL, {'rol': 'COMITE'})
+
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            {u['id'] for u in r.data},
+            {self.comite.id},
+        )
 
     def test_usuario_con_varios_roles_aparece_una_sola_vez(self):
         r = self.client.get(URL, {'rol': 'ADMIN'})
@@ -60,7 +86,10 @@ class FiltrarUsuariosTests(APITestCase):
         self.assertEqual(set(ids), {self.admin.id, self.multi.id})
 
     def test_combina_nombre_y_rol(self):
-        self.assertEqual(self.buscar(nombre='gómez', rol='AUTOR'), {self.ana.id})
+        self.assertEqual(
+            self.buscar(nombre='gómez', rol='AUTOR'),
+            {self.ana.id},
+        )
 
     def test_sin_resultados_devuelve_lista_vacia(self):
         self.assertEqual(self.buscar(nombre='zzz'), set())
@@ -86,12 +115,17 @@ class FiltrarUsuariosTests(APITestCase):
 
     def test_multirol_como_autor_filtra_solo_sobre_lo_suyo(self):
         self.client.force_authenticate(self.multi)
-        r = self.client.get(URL, {'rol': 'ADMIN'}, HTTP_X_ROL_ACTIVO='AUTOR')
+        r = self.client.get(
+            URL, {'rol': 'ADMIN'}, HTTP_X_ROL_ACTIVO='AUTOR'
+        )
         self.assertEqual({u['id'] for u in r.data}, {self.multi.id})
 
     def test_sin_sesion_recibe_401(self):
         self.client.force_authenticate(None)
-        self.assertEqual(self.client.get(URL, {'nombre': 'ana'}).status_code, 401)
+        self.assertEqual(
+            self.client.get(URL, {'nombre': 'ana'}).status_code,
+            401,
+        )
 
     def test_no_se_exponen_datos_de_acceso(self):
         for u in self.client.get(URL, {'nombre': 'ana'}).data:
