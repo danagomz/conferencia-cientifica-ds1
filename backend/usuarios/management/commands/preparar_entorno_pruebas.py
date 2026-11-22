@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from articulos.models import EvaluadorLinea
 from conferencias.models import Conferencia, LineaTematica, Plazo
 from usuarios.models import PerfilUsuario
 from usuarios.roles import ADMIN, AUTOR, COMITE, asignar_roles
@@ -83,6 +84,12 @@ class Command(BaseCommand):
             },
         )
         self._lineas(conferencia, LINEAS)
+        # El comité de pruebas tiene experiencia en dos líneas, para probar la selección por tema.
+        comite = User.objects.get(username='comite@pruebas.co')
+        for linea in LineaTematica.objects.filter(
+            id_conferencia=conferencia, nombre__in=[LINEAS[0][0], LINEAS[1][0]]
+        ):
+            EvaluadorLinea.objects.get_or_create(id_usuario=comite, id_linea=linea)
         Plazo.objects.get_or_create(
             id_conferencia=conferencia, tipo_plazo=Plazo.POSTULACION,
             defaults={'fecha_inicio': ahora - timedelta(days=5), 'fecha_fin': ahora + timedelta(days=60)},

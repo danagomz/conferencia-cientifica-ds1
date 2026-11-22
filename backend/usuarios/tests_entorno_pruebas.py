@@ -83,3 +83,14 @@ class PrepararEntornoDePruebasTests(TestCase):
             with self.assertRaises(CommandError):
                 call_command('preparar_entorno_pruebas', stdout=StringIO())
         self.assertEqual(User.objects.count(), 0)
+
+
+class ExperienciaDelComiteDePruebasTests(TestCase):
+    """SDGC-195: el comité de pruebas ya trae líneas de experiencia."""
+
+    def test_el_comite_de_pruebas_tiene_dos_lineas_y_no_se_duplican(self):
+        from articulos.models import EvaluadorLinea
+        preparar()
+        preparar()
+        comite = User.objects.get(username='comite@pruebas.co')
+        self.assertEqual(EvaluadorLinea.objects.filter(id_usuario=comite).count(), 2)
