@@ -9,7 +9,8 @@ import {
 import { Marca } from "../components/Marca";
 
 const claseCampo =
-  "input input-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 px-4 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20";
+  "input input-bordered mt-2 min-h-12 w-full rounded-xl border !border-slate-300 bg-slate-50/70 px-4 text-slate-900 shadow-2xs outline-none transition placeholder:text-slate-500 hover:!border-slate-400 focus:!border-slate-700 focus:bg-white focus:ring-2 focus:ring-slate-500/20";
+
 const claseErrorCampo = "mt-2 text-sm font-medium text-red-700";
 
 const CLAVE_AUTOR_REGISTRADOR = "autor-registrador";
@@ -258,9 +259,17 @@ export function RegistroArticulo() {
       <main className="relative mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <Link
           to="/autor"
-          className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
+          className="group inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
         >
-          <span aria-hidden="true">←</span> Panel de autor
+          <span
+            aria-hidden="true"
+            className="text-lg leading-none transition-transform duration-200 group-hover:-translate-x-1"
+          >
+            ‹
+          </span>{" "}
+          <span className="group-hover:underline underline-offset-4">
+            Panel de autor
+          </span>
         </Link>
 
         {articuloCreado ? (
@@ -482,7 +491,7 @@ export function RegistroArticulo() {
                             "El resumen no puede contener solo espacios.",
                         })}
                         placeholder="Describe brevemente el objetivo y aporte de la propuesta"
-                        className={`textarea textarea-bordered mt-2 min-h-36 w-full rounded-none border-slate-300 bg-slate-100 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20 ${errors.resumen ? "textarea-error" : ""}`}
+                        className={`textarea textarea-bordered mt-2 min-h-36 w-full rounded-xl border !border-slate-300 bg-slate-50/70 px-4 py-3 text-slate-900 shadow-2xs outline-none transition placeholder:text-slate-500 hover:!border-slate-400 focus:!border-slate-700 focus:bg-white focus:ring-2 focus:ring-slate-500/20 ${errors.resumen ? "textarea-error" : ""}`}
                       />
                       {errors.resumen && (
                         <p className={claseErrorCampo}>
@@ -535,7 +544,7 @@ export function RegistroArticulo() {
                           onChange={(evento) =>
                             cambiarConvocatoria(evento.target.value)
                           }
-                          className="select select-bordered mt-2 min-h-12 w-full min-w-0 rounded-none border-slate-300 bg-slate-100 text-slate-900 focus:border-slate-600 focus:bg-white"
+                          className="select select-bordered mt-2 min-h-12 w-full min-w-0 rounded-xl border !border-slate-300 bg-white px-4 text-slate-900 shadow-2xs outline-none transition hover:!border-slate-400 focus:!border-slate-700 focus:ring-2 focus:ring-slate-500/20"
                         >
                           {convocatoriasAbiertas.map((convocatoria) => (
                             <option
@@ -575,7 +584,7 @@ export function RegistroArticulo() {
                             required:
                               "Selecciona una línea temática habilitada.",
                           })}
-                          className="select select-bordered mt-2 min-h-12 w-full min-w-0 rounded-none border-slate-300 bg-slate-100 text-slate-900 focus:border-slate-600 focus:bg-white"
+                          className="select select-bordered mt-2 min-h-12 w-full min-w-0 rounded-xl border !border-slate-300 bg-white px-4 text-slate-900 shadow-2xs outline-none transition hover:!border-slate-400 focus:!border-slate-700 focus:ring-2 focus:ring-slate-500/20"
                         >
                           {lineasDisponibles.map((linea) => (
                             <option key={linea.id} value={linea.id}>
@@ -881,7 +890,7 @@ export function RegistroArticulo() {
                 <div className="flex flex-col-reverse gap-3 border-t border-white/80 pt-6 sm:flex-row sm:justify-end">
                   <Link
                     to="/autor"
-                    className="inline-flex min-h-12 items-center justify-center rounded-none border border-slate-300 bg-white/90 px-6 font-semibold text-slate-700 transition hover:bg-white"
+                    className="inline-flex min-h-12 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-[#a63f3f] hover:bg-[#fac0c0]/35 hover:text-[#7a2828] active:scale-[0.98]"
                   >
                     Cancelar
                   </Link>
@@ -892,7 +901,7 @@ export function RegistroArticulo() {
                       !valoresFormulario.lineaTematica ||
                       !datosAutorActualCompletos
                     }
-                    className="btn min-h-12 rounded-none border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn min-h-12 rounded-full border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {estadoEnvio === "enviando"
                       ? "Registrando artículo…"
