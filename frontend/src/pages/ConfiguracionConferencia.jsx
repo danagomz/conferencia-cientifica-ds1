@@ -440,7 +440,7 @@ export function ConfiguracionConferencia() {
             </span>
             <Link
               to={sesion.rolActivo === "ADMIN" ? "/admin" : "/comite"}
-              className="border border-line px-4 py-2 font-semibold transition hover:bg-soft"
+              className="rounded-full border border-line px-4 py-2 font-semibold transition hover:bg-[#E6E49F]/35 hover:text-[#02111B]"
             >
               Volver al panel
             </Link>
@@ -720,7 +720,7 @@ export function ConfiguracionConferencia() {
                     <button
                       type="submit"
                       disabled={guardandoPlazos}
-                      className="btn min-h-12 w-full rounded-none border-brand bg-brand px-6 font-semibold text-brand-fg hover:border-brand-hover hover:bg-brand-hover disabled:opacity-60 sm:w-auto"
+                      className="btn min-h-12 w-full rounded-full border-brand bg-brand px-6 font-semibold text-brand-fg hover:border-brand-hover hover:bg-brand-hover disabled:opacity-60 sm:w-auto"
                     >
                       {guardandoPlazos
                         ? "Guardando plazos…"
@@ -827,7 +827,7 @@ export function ConfiguracionConferencia() {
                       <button
                         type="submit"
                         disabled={guardandoLinea}
-                        className="btn min-h-11 flex-1 rounded-none border-brand bg-brand font-semibold text-brand-fg hover:border-brand-hover hover:bg-brand-hover disabled:opacity-60"
+                        className="btn min-h-11 flex-1 rounded-full border-brand bg-brand font-semibold text-brand-fg hover:border-brand-hover hover:bg-brand-hover disabled:opacity-60"
                       >
                         {guardandoLinea
                           ? "Guardando…"
@@ -877,7 +877,7 @@ export function ConfiguracionConferencia() {
                                 type="button"
                                 onClick={() => iniciarEdicion(linea)}
                                 disabled={guardandoLinea}
-                                className="btn btn-sm rounded-none border-line bg-panel text-fg"
+                                className="btn btn-sm rounded-xl border-line bg-panel text-fg transition-all duration-200 hover:border-brand hover:bg-brand/10 hover:text-brand"
                               >
                                 Editar
                               </button>
@@ -885,7 +885,7 @@ export function ConfiguracionConferencia() {
                                 type="button"
                                 onClick={() => cambiarEstadoLinea(linea)}
                                 disabled={guardandoLinea}
-                                className="btn btn-sm rounded-none border-line bg-panel text-fg"
+                                className="btn btn-sm rounded-xl border-line bg-panel text-fg transition-all duration-200 hover:border-[#a63f3f] hover:bg-[#fac0c0]/30 hover:text-brand"
                               >
                                 {linea.habilitada ? "Desactivar" : "Habilitar"}
                               </button>
