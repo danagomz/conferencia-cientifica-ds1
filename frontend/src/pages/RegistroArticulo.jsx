@@ -343,14 +343,7 @@ export function RegistroArticulo() {
                 <div className="absolute inset-10 rounded-full border border-white/10" />
               </div>
               <div className="relative max-w-3xl">
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-slate-200">
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 rounded-full bg-sky-300"
-                  />
-                  Convocatorias científicas
-                </p>
-                <h1 className="mt-5 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
+                <h1 className=" font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
                   Registrar un artículo
                 </h1>
                 <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
