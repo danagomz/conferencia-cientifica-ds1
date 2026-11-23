@@ -25,7 +25,7 @@ const ROLES = [
 ];
 
 const CLASE_CAMPO =
-  "input input-bordered mt-2 min-h-12 w-full rounded-none !border-2 !border-[#68766F] bg-[#FCFCFC] px-4 text-[#02111B] outline-none transition placeholder:text-[#777B78] focus:!border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20";
+  "mt-2 min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-[#02111B] outline-none transition placeholder:text-[#989C94] hover:border-slate-400 focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20";
 
 const CLASE_ERROR = "mt-1 block text-sm font-medium text-red-800";
 

@@ -21,7 +21,7 @@ const ROLES = [
 ];
 
 const CLASE_CAMPO =
-  "input input-bordered mt-2 min-h-12 w-full rounded-none border-2 border-[#5D737E]/70 bg-[#FCFCFC] px-4 text-[#02111B] shadow-sm outline-none transition placeholder:text-[#777B78] focus:border-[#02111B] focus:ring-4 focus:ring-[#5D737E]/20";
+  "mt-2 min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-[#02111B] outline-none transition placeholder:text-[#989C94] hover:border-slate-400 focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20";
 const CLASE_ERROR = "mt-1 block text-sm font-medium text-red-800";
 const ETIQUETAS_CAMPOS = {
   nombre: "Nombre",
@@ -179,7 +179,7 @@ export function CrearUsuario() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Link
             to={rutaPanel}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[#5D737E] transition hover:bg-[#E6E49F]/35 hover:text-[#02111B]"
+            className="pointer-events-none inline-flex min-h-10 items-center gap-2 px-3"
           >
             {" "}
             <Marca compacta />
@@ -214,6 +214,7 @@ export function CrearUsuario() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#BDC2BF]">
               Administración de cuentas
             </p>
+
             <h1 className="mt-5 max-w-sm font-display text-3xl font-extrabold leading-tight sm:text-4xl">
               Crear usuario
             </h1>
