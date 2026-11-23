@@ -28,11 +28,10 @@ const CAMPOS_FORMULARIO = {
 };
 
 const claseCampo =
-  "input input-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 px-4 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20";
+  "input input-bordered mt-2 min-h-12 w-full rounded-xl border !border-slate-300 bg-slate-50/70 px-4 text-slate-900 shadow-2xs outline-none transition placeholder:text-slate-500 hover:!border-slate-400 focus:!border-slate-700 focus:bg-white focus:ring-2 focus:ring-slate-500/20";
 const claseErrorCampo = "mt-2 text-sm font-medium text-red-700";
 const claseBotonSecundario =
-  "inline-flex min-h-12 items-center justify-center rounded-none border border-slate-300 bg-white/90 px-6 font-semibold text-slate-700 transition hover:bg-white";
-
+  "inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 shadow-2xs transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900";
 function fechaLegible(fecha) {
   return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-CO", {
     year: "numeric",
@@ -134,7 +133,9 @@ export function EditarArticulo() {
   const opcionesLinea = articulo
     ? construirOpcionesLinea(articulo, convocatoria)
     : [];
-  const motivoBloqueo = articulo ? motivoNoEditable(articulo, convocatoria) : "";
+  const motivoBloqueo = articulo
+    ? motivoNoEditable(articulo, convocatoria)
+    : "";
   const editable = motivoBloqueo === "";
   const enviando = estadoEnvio === "enviando";
   const sinAutorizacion =
@@ -173,7 +174,7 @@ export function EditarArticulo() {
 
     establecerErroresCampos({});
     establecerAlerta(null);
-        const erroresLocales = validarDatosArticulo(
+    const erroresLocales = validarDatosArticulo(
       valores,
       opcionesLinea.map((linea) => String(linea.id)),
     );
@@ -289,9 +290,17 @@ export function EditarArticulo() {
       <main className="relative mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <Link
           to={RUTA_MIS_ARTICULOS}
-          className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
+          className="group inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
         >
-          <span aria-hidden="true">←</span> Mis artículos
+          <span
+            aria-hidden="true"
+            className="text-lg leading-none transition-transform duration-200 group-hover:-translate-x-1"
+          >
+            ‹
+          </span>{" "}
+          <span className="group-hover:underline underline-offset-4">
+            Mis artículos
+          </span>
         </Link>
 
         <div className="relative mt-7 overflow-hidden rounded-none bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-8 text-white shadow-2xl sm:px-10 sm:py-11">
@@ -303,14 +312,7 @@ export function EditarArticulo() {
             <div className="absolute inset-10 rounded-full border border-white/10" />
           </div>
           <div className="relative max-w-3xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-slate-200">
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-sky-300"
-              />
-              Convocatorias científicas
-            </p>
-            <h1 className="mt-5 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
+            <h1 className=" font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
               Modificar un artículo
             </h1>
             <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
@@ -429,7 +431,9 @@ export function EditarArticulo() {
                 disabled={!editable || enviando}
                 className="mt-6 grid gap-5 sm:grid-cols-2"
               >
-                <legend className="sr-only">Datos editables del artículo</legend>
+                <legend className="sr-only">
+                  Datos editables del artículo
+                </legend>
 
                 <div className="sm:col-span-2">
                   <label
@@ -479,7 +483,7 @@ export function EditarArticulo() {
                       erroresCampos.resumen ? "error-resumen" : undefined
                     }
                     placeholder="Describe brevemente el objetivo y aporte de la propuesta"
-                    className={`textarea textarea-bordered mt-2 min-h-36 w-full rounded-none border-slate-300 bg-slate-100 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-600 focus:bg-white focus:ring-2 focus:ring-slate-500/20 ${erroresCampos.resumen ? "textarea-error" : ""}`}
+                    className={`textarea textarea-bordered mt-2 min-h-36 w-full rounded-xl border !border-slate-300 bg-slate-50/70 px-4 py-3 text-slate-900 shadow-2xs outline-none transition placeholder:text-slate-500 hover:!border-slate-400 focus:!border-slate-700 focus:bg-white focus:ring-2 focus:ring-slate-500/20 ${erroresCampos.resumen ? "textarea-error" : ""}`}
                   />
                   {erroresCampos.resumen && (
                     <p id="error-resumen" className={claseErrorCampo}>
@@ -535,14 +539,19 @@ export function EditarArticulo() {
                     aria-describedby={
                       erroresCampos.idLinea ? "error-linea" : undefined
                     }
-                    className="select select-bordered mt-2 min-h-12 w-full rounded-none border-slate-300 bg-slate-100 text-slate-900 focus:border-slate-600 focus:bg-white"
+                    className="select select-bordered mt-2 min-h-12 w-full rounded-xl border !border-slate-300 bg-white px-4 text-slate-900 shadow-2xs outline-none transition hover:!border-slate-400 focus:!border-slate-700 focus:ring-2 focus:ring-slate-500/20"
                   >
                     {opcionesLinea.map((linea) => (
-                      <option key={linea.id} value={String(linea.id)}>
+                      <option
+                        key={linea.id}
+                        value={String(linea.id)}
+                        className="bg-white py-2 text-slate-900"
+                      >
                         {linea.nombre}
                       </option>
                     ))}
                   </select>
+
                   {erroresCampos.idLinea && (
                     <p id="error-linea" className={claseErrorCampo}>
                       {erroresCampos.idLinea}
@@ -599,7 +608,7 @@ export function EditarArticulo() {
               <button
                 type="submit"
                 disabled={enviando || !editable}
-                className="btn min-h-12 rounded-none border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn min-h-12 rounded-full border-slate-900 bg-slate-900 px-7 font-semibold text-white shadow-lg transition hover:border-slate-700 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {enviando ? "Guardando cambios…" : "Guardar cambios"}
               </button>

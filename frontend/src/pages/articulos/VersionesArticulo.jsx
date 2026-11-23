@@ -207,7 +207,7 @@ function FormularioCarga({
         disabled={deshabilitado || cargando}
         onChange={alSeleccionar}
         aria-describedby="ayuda-archivo-version"
-        className="file-input file-input-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel text-sm text-fg focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25 disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:opacity-60"
+        className="file-input file-input-bordered h-12 w-full max-w-xl rounded-2xl border !border-slate-300 bg-slate-100 p-1.5 text-slate-600 transition hover:!border-slate-400 focus:!border-brand focus:bg-white file:mr-3.5 file:h-full file:rounded-xl file:border file:!border-slate-300 file:!bg-white file:px-4 file:text-xs file:font-semibold file:text-slate-800 file:shadow-2xs hover:file:!bg-slate-50"
       />
 
       <p id="ayuda-archivo-version" className="mt-2 text-xs text-muted">
@@ -243,7 +243,7 @@ function FormularioCarga({
       <button
         type="submit"
         disabled={deshabilitado || cargando}
-        className="btn mt-5 min-h-12 rounded-none border-2 border-brand bg-brand px-6 text-sm font-bold text-brand-fg shadow-sm transition hover:border-brand-hover hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-70"
+        className="btn mt-5 h-10 min-h-10 rounded-full border border-brand bg-brand px-5 text-sm font-semibold text-brand-fg shadow-xs transition hover:border-brand-hover hover:bg-brand-hover hover:text-brand-hover-fg disabled:cursor-not-allowed disabled:border-line disabled:bg-soft disabled:text-muted disabled:opacity-70"
       >
         {cargando && (
           <span
@@ -315,7 +315,7 @@ function ListaHistorial({ versiones }) {
                 </span>
 
                 {esActual && (
-                  <span className="inline-flex items-center border border-brand bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-fg">
+                  <span className="inline-flex items-center rounded border-brand bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-fg">
                     Versión actual
                   </span>
                 )}
@@ -694,10 +694,7 @@ export function VersionesArticulo() {
             >
               <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
               <div className="flex items-center justify-between border-b border-line px-6 py-4">
-                <h2
-                  id="titulo-historial"
-                  className="text-lg font-bold text-fg"
-                >
+                <h2 id="titulo-historial" className="text-lg font-bold text-fg">
                   Historial de versiones
                 </h2>
                 <span className="text-xs text-muted" aria-live="polite">
