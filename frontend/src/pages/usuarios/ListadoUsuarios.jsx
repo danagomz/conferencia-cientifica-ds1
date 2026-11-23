@@ -175,10 +175,7 @@ function inicialUsuario(usuario) {
 function FilaUsuario({ usuario }) {
   const roles = Array.isArray(usuario.roles) ? usuario.roles : [];
 
-  const nombreCompleto = [
-    usuario.first_name,
-    usuario.last_name,
-  ]
+  const nombreCompleto = [usuario.first_name, usuario.last_name]
     .filter(Boolean)
     .join(" ");
 
@@ -197,15 +194,11 @@ function FilaUsuario({ usuario }) {
             {nombreCompleto || "Nombre no registrado"}
           </p>
 
-          <p className="mt-1 text-xs text-muted">
-            Usuario registrado
-          </p>
+          <p className="mt-1 text-xs text-muted">Usuario registrado</p>
         </div>
       </div>
 
-      <p className="truncate text-sm text-muted">
-        {usuario.email}
-      </p>
+      <p className="truncate text-sm text-muted">{usuario.email}</p>
 
       <p className="truncate text-sm text-muted">
         {usuario.institucion || "Sin institución registrada"}
@@ -222,9 +215,7 @@ function FilaUsuario({ usuario }) {
             </span>
           ))
         ) : (
-          <span className="text-xs text-muted">
-            Sin roles
-          </span>
+          <span className="text-xs text-muted">Sin roles</span>
         )}
       </div>
 
@@ -232,7 +223,7 @@ function FilaUsuario({ usuario }) {
         <Link
           to={`/gestion/usuarios/${usuario.id}/editar`}
           aria-label={`Editar usuario ${nombreCompleto || usuario.email}`}
-          className="inline-flex min-h-10 items-center justify-center border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-brand hover:text-brand-fg"
+          className="inline-flex min-h-10 items-center justify-center border rounded-full border-brand px-3 text-sm font-lightbold text-brand transition hover:bg-brand hover:text-brand-fg"
         >
           Editar
         </Link>
@@ -404,7 +395,7 @@ export function ListadoUsuarios() {
 
           <Link
             to="/gestion/usuarios/nuevo"
-            className="inline-flex min-h-11 items-center justify-center bg-brand px-5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
+            className="rounded-full inline-flex min-h-11 items-center justify-center bg-brand px-5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
           >
             Crear usuario
           </Link>

@@ -198,7 +198,7 @@ export function InicioRol({ rol }) {
               <button
                 type="button"
                 onClick={cerrarSesion}
-                className="rounded-lg border border-line px-3 py-2 font-semibold transition hover:border-highlight hover:bg-[#E6E49F]/35"
+                className="rounded-full border border-line px-3 py-2 font-bold transition hover:border-highlight hover:bg-[#E6E49F]/35"
               >
                 Cerrar sesión
               </button>
@@ -224,7 +224,7 @@ export function InicioRol({ rol }) {
 
             <Link
               to="/perfil/editar"
-              className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+              className="rounded-full mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
             >
               Actualizar mis datos
             </Link>
