@@ -31,8 +31,10 @@ const MODOS = {
   },
 };
 
-const COLUMNAS_CON_AUTOR = "sm:grid-cols-[1fr_160px_190px_110px_120px]";
-const COLUMNAS_SIN_AUTOR = "sm:grid-cols-[1fr_170px_110px_150px_250px]";
+const COLUMNAS_CON_AUTOR =
+  "lg:grid-cols-[minmax(240px,1.5fr)_150px_185px_115px_135px]";
+const COLUMNAS_SIN_AUTOR =
+  "lg:grid-cols-[minmax(220px,1.4fr)_175px_115px_135px_235px]";
 
 function formatearFecha(valor) {
   const fecha = new Date(valor.length === 10 ? `${valor}T00:00:00` : valor);
@@ -354,7 +356,7 @@ function ListadoArticulos({ modo = "todos" }) {
                   onChange={(evento) =>
                     setLineaSeleccionada(evento.target.value)
                   }
-                  className="select select-bordered min-h-12 w-full rounded-none border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
+                  className="select select-bordered min-h-12 w-full rounded-sm border-2 border-highlight bg-panel px-4 text-sm font-medium text-fg shadow-sm outline-none focus:border-brand focus:outline-none focus:ring-4 focus:ring-highlight/25"
                 >
                   <option value="">Todas las líneas</option>
 
@@ -418,7 +420,7 @@ function ListadoArticulos({ modo = "todos" }) {
           )}
 
           <div
-            className={`hidden gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid ${columnas}`}
+            className={`hidden gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted lg:grid ${columnas}`}
           >
             <span>Título</span>
             {config.conAutor && <span>Autor</span>}
@@ -476,34 +478,45 @@ function ListadoArticulos({ modo = "todos" }) {
                 return (
                   <div
                     key={art.id}
-                    className={`group relative grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 focus-within:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
+                    className={`group relative grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 focus-within:bg-soft/50 lg:items-center lg:gap-4 ${columnas}`}
                   >
                     <div className="min-w-0">
                       <Link
                         to={`${ubicacion.pathname}?detalle=${art.id}`}
                         aria-label={`Consultar detalle de ${art.titulo}`}
                         title={`Consultar detalle de ${art.titulo}`}
-                        className="block min-w-0 text-sm font-semibold text-fg outline-none transition-colors after:absolute after:inset-0 group-hover:text-highlight focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-highlight sm:truncate"
+                        className="block min-w-0 text-sm font-semibold text-fg outline-none transition-colors after:absolute after:inset-0 group-hover:text-highlight focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-highlight lg:truncate"
                       >
                         {art.titulo}
                       </Link>
-
                       {sesion?.rolActivo === "COMITE" && (
-                        <Link
-                          to={`/gestion/evaluadores/asignar/${art.id}`}
-                          onClick={(evento) => evento.stopPropagation()}
-                          className="relative z-20 mt-2 inline-flex min-h-9 items-center rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg"
-                        >
-                          {art.evaluadores_asignados === 0
-                            ? "Asignar evaluadores"
-                            : art.evaluadores_asignados < 3
-                              ? "Completar evaluadores"
-                              : "Ver evaluadores asignados"}
-                        </Link>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                          <Link
+                            to={`/gestion/evaluadores/asignar/${art.id}`}
+                            onClick={(evento) => evento.stopPropagation()}
+                            className="relative z-20 inline-flex min-h-8 items-center whitespace-nowrap rounded-full border border-highlight bg-panel px-3.5 py-1 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg"
+                          >
+                            {art.evaluadores_asignados === 0
+                              ? "Asignar evaluadores"
+                              : art.evaluadores_asignados < 3
+                                ? "Completar evaluadores"
+                                : "Ver evaluadores asignados"}
+                          </Link>
+                          {art.evaluadores_asignados !== undefined && (
+                            <span
+                              className={`inline-flex w-fit items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold ${
+                                art.evaluadores_asignados === 0
+                                  ? "border-highlight bg-[#E6E49F]/35 text-fg"
+                                  : "border-line bg-soft/40 text-muted"
+                              }`}
+                            >
+                              {art.evaluadores_asignados}/3 evaluadores
+                            </span>
+                          )}
+                        </div>
                       )}
-
                       {!config.conAutor && coautores.length > 0 && (
-                        <p className="mt-1 text-xs text-muted sm:truncate">
+                        <p className="mt-1 text-xs text-muted lg:truncate">
                           Coautores:{" "}
                           {coautores.map((autor) => autor.nombre).join(", ")}
                         </p>
@@ -512,7 +525,7 @@ function ListadoArticulos({ modo = "todos" }) {
 
                     {config.conAutor && (
                       <span className="text-sm text-muted">
-                        <span className="font-semibold text-fg sm:hidden">
+                        <span className="font-semibold text-fg lg:hidden">
                           Autor:{" "}
                         </span>
                         {autores}
@@ -520,13 +533,13 @@ function ListadoArticulos({ modo = "todos" }) {
                     )}
 
                     <div>
-                      <span className="inline-flex items-center rounded-sm border border-line bg-soft/40 px-2 py-1 text-[10px] font-medium text-fg">
+                      <span className="inline-flex w-fit items-center whitespace-nowrap rounded-full border border-line bg-soft/40 px-2.5 py-1 text-xs font-medium text-fg">
                         {art.linea}
                       </span>
                     </div>
 
                     <span className="text-xs tabular-nums text-muted">
-                      <span className="font-semibold text-fg sm:hidden">
+                      <span className="font-semibold text-fg lg:hidden">
                         Fecha:{" "}
                       </span>
                       {formatearFecha(art.fecha)}
@@ -534,38 +547,25 @@ function ListadoArticulos({ modo = "todos" }) {
 
                     <div>
                       <span
-                        className={`inline-flex items-center border-y border-r border-l-6 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
+                        className={`inline-flex items-center whitespace-nowrap border-y border-r border-l-6 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${estado.clases}`}
                       >
                         {estado.etiqueta}
                       </span>
                     </div>
-
-                    {sesion?.rolActivo === "COMITE" &&
-                      art.evaluadores_asignados !== undefined && (
-                        <span
-                          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold ${
-                            art.evaluadores_asignados === 0
-                              ? "border-highlight bg-[#E6E49F]/35 text-fg"
-                              : "border-line bg-soft/40 text-muted"
-                          }`}
-                        >
-                          {art.evaluadores_asignados}/3 evaluadores
-                        </span>
-                      )}
 
                     {modo === "propios" && (
                       <div className="relative z-10 flex flex-wrap gap-2">
                         <Link
                           to={`/autor/articulos/${art.id}/editar`}
                           aria-label={`Editar el artículo ${art.titulo}`}
-                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+                          className="inline-flex min-h-8 items-center whitespace-nowrap rounded-full border border-highlight bg-panel px-3.5 py-1 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
                         >
                           Editar
                         </Link>
                         <Link
                           to={`/autor/articulos/${art.id}/versiones`}
                           aria-label={`Gestionar versiones de ${art.titulo}`}
-                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md border border-highlight bg-panel px-3 py-1.5 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+                          className="inline-flex min-h-8 items-center whitespace-nowrap rounded-full border border-highlight bg-panel px-3.5 py-1 text-xs font-bold text-brand transition-colors hover:border-brand hover:bg-brand hover:text-brand-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
                         >
                           Gestionar versiones
                         </Link>
