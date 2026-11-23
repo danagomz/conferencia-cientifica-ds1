@@ -14,6 +14,7 @@ const TIPOS_VERSION = {
   ORIGINAL: "Original",
   CORREGIDA: "Corregida",
 };
+const TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024;
 
 function formatearFechaHora(valor) {
   if (!valor) return "Sin fecha registrada";
@@ -111,23 +112,6 @@ function Notificacion({ tipo, mensaje, alCerrar }) {
           : "border-emerald-200 border-l-emerald-600 bg-emerald-50 text-emerald-900"
       }`}
     >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="mt-0.5 h-5 w-5 shrink-0"
-      >
-        {esError ? (
-          <path d="M12 8v5m0 3.5v.01M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z" />
-        ) : (
-          <path d="M5 12.5 10 17.5 19 7.5" />
-        )}
-      </svg>
-
       <div className="min-w-0 flex-1">
         <p className="font-bold">
           {esError ? "No se pudo cargar la versión" : "Versión cargada"}
@@ -212,7 +196,7 @@ function FormularioCarga({
 
       <p id="ayuda-archivo-version" className="mt-2 text-xs text-muted">
         {motivoDeshabilitado ||
-          "Solo se admiten archivos en formato PDF. Las versiones anteriores se conservan."}
+          "Solo se admiten archivos PDF de máximo 10 MB. Las versiones anteriores se conservan."}
       </p>
 
       {archivo && (
@@ -463,6 +447,14 @@ export function VersionesArticulo() {
       rechazarArchivo(
         evento,
         `El archivo "${elegido.name}" está vacío. Seleccione un PDF con contenido.`,
+      );
+      return;
+    }
+
+    if (elegido.size > TAMANO_MAXIMO_BYTES) {
+      rechazarArchivo(
+        evento,
+        `El archivo "${elegido.name}" supera el tamaño máximo permitido de 10 MB. Seleccione un PDF más pequeño.`,
       );
       return;
     }
