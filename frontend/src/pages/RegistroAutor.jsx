@@ -107,7 +107,7 @@ export function RegistroAutor() {
             </span>
             <Link
               to="/login"
-              className="border border-[#5D737E] px-4 py-2 font-semibold text-[#02111B] transition hover:bg-[#E3E7D3]"
+              className="rounded-lg border border-[#5D737E] px-4 py-2 font-semibold text-[#02111B] transition hover:bg-[#E6E49F]/35"
             >
               Iniciar sesión
             </Link>
@@ -115,8 +115,10 @@ export function RegistroAutor() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1440px] lg:min-h-[calc(100dvh-81px)] lg:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.8fr)]">
-        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-10 text-[#FCFCFC] sm:px-10 lg:px-12 lg:py-14">
+      <main className="grid w-full lg:min-h-[calc(100dvh-81px)] lg:grid-cols-[minmax(300px,32fr)_minmax(0,68fr)]">
+        {" "}
+        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-10 text-[#FCFCFC] sm:px-10 lg:px-12 lg:py-14 xl:px-16">
+          {" "}
           <div
             aria-hidden="true"
             className="absolute -right-20 top-28 h-64 w-64 rounded-full border border-[#5D737E]/50"
@@ -125,7 +127,6 @@ export function RegistroAutor() {
             aria-hidden="true"
             className="absolute -right-10 top-40 h-44 w-44 rounded-full border border-[#989C94]/40"
           />
-
           <div className="relative flex h-full flex-col">
             <h1 className="mt-8 max-w-xl font-display text-4xl font-bold leading-tight sm:text-5xl">
               Regístrate
@@ -183,19 +184,8 @@ export function RegistroAutor() {
                 </li>
               </ol>
             </div>
-
-            <div className="mt-10 flex items-start gap-3 border-l-2 border-[#E6E49F] bg-[#30292F] p-4 lg:mt-auto lg:translate-y-8">
-              <span aria-hidden="true" className="mt-0.5 text-[#E6E49F]">
-                ✦
-              </span>
-              <p className="text-sm leading-6 text-[#FCFCFC]">
-                Tu cuenta se crea con el rol de{" "}
-                <strong className="text-[#E6E49F]">Autor</strong>
-              </p>
-            </div>
           </div>
         </aside>
-
         <section className="px-5 py-10 sm:px-10 lg:px-14 lg:py-14">
           <div className="mx-auto max-w-3xl">
             <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#BDC2BF] pb-5">
@@ -424,7 +414,7 @@ export function RegistroAutor() {
                   <button
                     type="submit"
                     disabled={cargando}
-                    className="min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E] disabled:cursor-wait disabled:opacity-60"
+                    className="rounded-full min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E] disabled:cursor-wait disabled:opacity-60"
                   >
                     {cargando ? "Creando cuenta…" : "Crear cuenta de autor"}
                   </button>

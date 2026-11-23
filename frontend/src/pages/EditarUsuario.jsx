@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -26,10 +25,9 @@ const ROLES = [
 ];
 
 const CLASE_CAMPO =
-  "input input-bordered mt-2 min-h-12 w-full rounded-none border-[#BDC2BF] bg-[#FCFCFC] px-4 text-[#02111B] outline-none transition placeholder:text-[#777B78] focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20";
+  "mt-2 min-h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-[#02111B] outline-none transition placeholder:text-[#989C94] hover:border-slate-400 focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20";
 
-const CLASE_ERROR =
-  "mt-1 block text-sm font-medium text-red-800";
+const CLASE_ERROR = "mt-1 block text-sm font-medium text-red-800";
 
 const ETIQUETAS_CAMPOS = {
   nombre: "Nombre",
@@ -48,18 +46,13 @@ function mostrarMensajes(mensajes) {
 function normalizarRoles(roles) {
   if (!Array.isArray(roles)) return [];
 
-  return roles.map((rol) =>
-    typeof rol === "string" ? rol : rol.codigo,
-  );
+  return roles.map((rol) => (typeof rol === "string" ? rol : rol.codigo));
 }
 
 export function EditarUsuario() {
   const { id } = useParams();
 
-  const {
-    sesion,
-    actualizarDatosUsuario,
-  } = useAutenticacion();
+  const { sesion, actualizarDatosUsuario } = useAutenticacion();
 
   const idUsuario = id ?? sesion?.usuario?.id;
 
@@ -69,8 +62,7 @@ export function EditarUsuario() {
     String(idUsuario) === String(sesion?.usuario?.id);
 
   const puedeGestionarRoles =
-    !esEdicionPropia &&
-    ["ADMIN", "COMITE"].includes(sesion?.rolActivo);
+    !esEdicionPropia && ["ADMIN", "COMITE"].includes(sesion?.rolActivo);
 
   /*
    * La ruta de perfil debe estar disponible incluso cuando
@@ -80,46 +72,36 @@ export function EditarUsuario() {
    * Se utiliza el primer rol asociado únicamente como
    * contexto de la petición cuando no hay uno seleccionado.
    */
-  const rolSolicitud =
-    sesion?.rolActivo ?? sesion?.roles?.[0];
+  const rolSolicitud = sesion?.rolActivo ?? sesion?.roles?.[0];
 
   const rolesPermitidos =
     sesion?.rolActivo === "ADMIN"
       ? ROLES
       : ROLES.filter((rol) => rol.codigo !== "ADMIN");
 
-  const rutaPanel =
-    sesion?.rolActivo
-      ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
-      : RUTA_ELEGIR_ROL;
+  const rutaPanel = sesion?.rolActivo
+    ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
+    : RUTA_ELEGIR_ROL;
 
-  const rutaCancelar = esEdicionPropia
-    ? rutaPanel
-    : "/gestion/usuarios";
+  const rutaCancelar = esEdicionPropia ? rutaPanel : "/gestion/usuarios";
 
-  const [formulario, establecerFormulario] = useState(
-    FORMULARIO_INICIAL,
-  );
+  const [formulario, establecerFormulario] = useState(FORMULARIO_INICIAL);
 
-  const [rolesSeleccionados, establecerRolesSeleccionados] =
-    useState([]);
+  const [rolesSeleccionados, establecerRolesSeleccionados] = useState([]);
 
-  const [usuarioCargado, establecerUsuarioCargado] =
-    useState(false);
+  const [usuarioCargado, establecerUsuarioCargado] = useState(false);
 
   const [cargando, establecerCargando] = useState(true);
 
   const [enviando, establecerEnviando] = useState(false);
 
-  const [mostrarContrasena, establecerMostrarContrasena] =
-    useState(false);
+  const [mostrarContrasena, establecerMostrarContrasena] = useState(false);
 
   const [erroresCampo, establecerErroresCampo] = useState({});
 
   const [erroresServidor, establecerErroresServidor] = useState({});
 
-  const [mensajeErrorGeneral, establecerMensajeErrorGeneral] =
-    useState("");
+  const [mensajeErrorGeneral, establecerMensajeErrorGeneral] = useState("");
 
   const [mensajeExito, establecerMensajeExito] = useState("");
 
@@ -134,8 +116,9 @@ export function EditarUsuario() {
     ...erroresCampo,
   };
 
-  const erroresParaAlerta = Object.entries(erroresVisibles)
-    .filter(([campo]) => ETIQUETAS_CAMPOS[campo]);
+  const erroresParaAlerta = Object.entries(erroresVisibles).filter(
+    ([campo]) => ETIQUETAS_CAMPOS[campo],
+  );
 
   useEffect(() => {
     if (!mensajeErrorGeneral || !alertaErrorRef.current) return;
@@ -208,9 +191,7 @@ export function EditarUsuario() {
          * una cuenta diferente a la cuenta autenticada.
          */
         if (!esEdicionPropia && puedeGestionarRoles) {
-          establecerRolesSeleccionados(
-            normalizarRoles(usuario.roles),
-          );
+          establecerRolesSeleccionados(normalizarRoles(usuario.roles));
         } else {
           establecerRolesSeleccionados([]);
         }
@@ -225,9 +206,7 @@ export function EditarUsuario() {
             : "No se pudo cargar la información del usuario.",
         );
 
-        establecerErroresServidor(
-          errorSolicitud.erroresCampo ?? {},
-        );
+        establecerErroresServidor(errorSolicitud.erroresCampo ?? {});
       } finally {
         if (activo) {
           establecerCargando(false);
@@ -252,9 +231,7 @@ export function EditarUsuario() {
   function actualizarCampo(evento) {
     const { name, value } = evento.target;
     const camposRelacionados =
-      name === "contrasena"
-        ? [name, "confirmarContrasena"]
-        : [name];
+      name === "contrasena" ? [name, "confirmarContrasena"] : [name];
 
     establecerFormulario((actual) => ({
       ...actual,
@@ -319,9 +296,10 @@ export function EditarUsuario() {
   }
 
   function alternarRol(codigo) {
-    if (!puedeGestionarRoles || !rolesPermitidos.some(
-      (rol) => rol.codigo === codigo,
-    )) {
+    if (
+      !puedeGestionarRoles ||
+      !rolesPermitidos.some((rol) => rol.codigo === codigo)
+    ) {
       return;
     }
 
@@ -398,22 +376,18 @@ export function EditarUsuario() {
          * La capa de solicitudes también comprueba los ID
          * antes de incorporar roles al PATCH.
          */
-        roles: puedeGestionarRoles
-          ? rolesSeleccionados
-          : undefined,
+        roles: puedeGestionarRoles ? rolesSeleccionados : undefined,
       });
 
-      const nombreActualizado =
-        [
-          usuarioActualizado.first_name ?? formulario.nombre.trim(),
-          usuarioActualizado.last_name ?? formulario.apellido.trim(),
-        ]
-          .filter(Boolean)
-          .join(" ");
+      const nombreActualizado = [
+        usuarioActualizado.first_name ?? formulario.nombre.trim(),
+        usuarioActualizado.last_name ?? formulario.apellido.trim(),
+      ]
+        .filter(Boolean)
+        .join(" ");
 
       const correoActualizado =
-        usuarioActualizado.email ??
-        formulario.correo.trim().toLowerCase();
+        usuarioActualizado.email ?? formulario.correo.trim().toLowerCase();
 
       /*
        * Si se modificó la propia cuenta, se actualiza
@@ -428,25 +402,16 @@ export function EditarUsuario() {
 
       establecerFormulario((actual) => ({
         ...actual,
-        nombre:
-          usuarioActualizado.first_name ?? actual.nombre,
-        apellido:
-          usuarioActualizado.last_name ?? actual.apellido,
-        correo:
-          usuarioActualizado.email ?? actual.correo,
-        institucion:
-          usuarioActualizado.institucion ?? actual.institucion,
+        nombre: usuarioActualizado.first_name ?? actual.nombre,
+        apellido: usuarioActualizado.last_name ?? actual.apellido,
+        correo: usuarioActualizado.email ?? actual.correo,
+        institucion: usuarioActualizado.institucion ?? actual.institucion,
         contrasena: "",
         confirmarContrasena: "",
       }));
 
-      if (
-        puedeGestionarRoles &&
-        Array.isArray(usuarioActualizado.roles)
-      ) {
-        establecerRolesSeleccionados(
-          normalizarRoles(usuarioActualizado.roles),
-        );
+      if (puedeGestionarRoles && Array.isArray(usuarioActualizado.roles)) {
+        establecerRolesSeleccionados(normalizarRoles(usuarioActualizado.roles));
       }
 
       establecerErroresCampo({});
@@ -465,9 +430,7 @@ export function EditarUsuario() {
           : "No se pudo actualizar la información del usuario.",
       );
 
-      establecerErroresServidor(
-        errorSolicitud.erroresCampo ?? {},
-      );
+      establecerErroresServidor(errorSolicitud.erroresCampo ?? {});
 
       establecerErroresCampo({});
     } finally {
@@ -494,7 +457,7 @@ export function EditarUsuario() {
 
             <Link
               to={rutaCancelar}
-              className="border border-[#5D737E] px-4 py-2 font-semibold transition hover:bg-[#E3E7D3]"
+              className="border rounded-full border-[#5D737E] px-4 py-2 font-semibold transition hover:bg-[#E3E7D3]"
             >
               Volver
             </Link>
@@ -502,61 +465,46 @@ export function EditarUsuario() {
         </div>
       </header>
 
-      <main className="mx-auto grid min-h-[calc(100dvh-73px)] max-w-6xl lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.5fr)]">
-        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-9 text-[#FCFCFC] sm:px-10 lg:px-11 lg:py-12">
+      <main className="grid min-h-[calc(100dvh-73px)] w-full overflow-x-hidden lg:grid-cols-[minmax(320px,36%)_1fr]">
+        <aside className="relative overflow-hidden bg-[#02111B] px-6 py-7 text-[#FCFCFC] sm:px-10 lg:px-12 lg:py-12 xl:px-16">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -right-20 top-14 h-64 w-64 rounded-full border border-[#5D737E]/40"
           />
-
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -right-8 top-28 h-40 w-40 rounded-full border border-[#BDC2BF]/30"
           />
-
           <div className="relative">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#BDC2BF]">
               Administración de cuentas
             </p>
-
             <h1 className="mt-5 max-w-sm font-display text-3xl font-extrabold leading-tight sm:text-4xl">
               {tituloFormulario}
             </h1>
-
-            <p className="mt-4 max-w-md leading-7 text-[#BDC2BF]">
-              {esEdicionPropia
-                ? "Actualiza tus datos personales y conserva tu información institucional al día."
-                : "Modifica la información de la cuenta seleccionada según los permisos de tu rol."}
+            <p className="mt-2 max-w-md leading-7 text-[#BDC2BF]">
+              Modifica la información de la cuenta seleccionada según los
+              permisos de tu rol.
             </p>
-
-            <div className="mt-8 border-l-2 border-[#E6E49F] bg-[#30292F] p-4 text-sm leading-6">
-              {esEdicionPropia
-                ? "Puedes actualizar tus datos personales. Los roles y niveles de autorización de tu propia cuenta no se pueden modificar desde esta pantalla."
-                : "Los cambios dependen de los permisos de tu cuenta. Las modificaciones de roles están restringidas a los roles autorizados por el sistema."}
+            <div className="mt-7 inline-flex items-center rounded-2xl bg-slate-800 px-6 py-3 text-sm leading-relaxed text-white">
+              Las modificaciones de roles están restringidas a los roles
+              autorizados por el sistema.
             </div>
-
-            {puedeGestionarRoles && (
-              <div className="mt-8 border-t border-white/15 pt-6">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#989C94]">
-                  Roles que puedes asignar
-                </p>
-
-                <ul className="mt-4 space-y-3">
-                  {rolesPermitidos.map((rol) => (
-                    <li
-                      key={rol.codigo}
-                      className="flex items-start gap-3 text-sm text-[#FCFCFC]"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="mt-2 h-1.5 w-1.5 shrink-0 bg-[#E6E49F]"
-                      />
-                      {rol.nombre}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="mt-10 border-t border-white/15 pt-6">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#989C94]">
+                Roles que puedes asignar
+              </p>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {rolesPermitidos.map((rol) => (
+                  <li
+                    key={rol.codigo}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#FCFCFC]"
+                  >
+                    {rol.nombre}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </aside>
 
@@ -571,9 +519,7 @@ export function EditarUsuario() {
 
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#5D737E]">
-                {esEdicionPropia
-                  ? "Perfil personal"
-                  : "Gestión administrativa"}
+                {esEdicionPropia ? "Perfil personal" : "Gestión administrativa"}
               </p>
 
               <h2 className="mt-2 font-display text-2xl font-extrabold sm:text-3xl">
@@ -581,8 +527,8 @@ export function EditarUsuario() {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-[#3F4045]">
-                Los campos marcados son obligatorios. Deja la contraseña
-                vacía si no deseas cambiarla.
+                Los campos marcados son obligatorios. Deja la contraseña vacía
+                si no deseas cambiarla.
               </p>
             </div>
 
@@ -616,23 +562,18 @@ export function EditarUsuario() {
                 className="mt-6 flex items-start justify-between gap-4 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950 outline-none focus:ring-2 focus:ring-red-700/30"
               >
                 <div>
-                  <p className="font-semibold">
-                    {mensajeErrorGeneral}
-                  </p>
+                  <p className="font-semibold">{mensajeErrorGeneral}</p>
 
                   {erroresParaAlerta.length > 0 && (
                     <ul className="mt-2 list-inside list-disc space-y-1">
-                      {erroresParaAlerta.flatMap(
-                        ([campo, mensajes]) =>
-                          (
-                            Array.isArray(mensajes)
-                              ? mensajes
-                              : [mensajes]
-                          ).map((mensaje, indice) => (
+                      {erroresParaAlerta.flatMap(([campo, mensajes]) =>
+                        (Array.isArray(mensajes) ? mensajes : [mensajes]).map(
+                          (mensaje, indice) => (
                             <li key={`${campo}-${indice}`}>
                               {ETIQUETAS_CAMPOS[campo]}: {mensaje}
                             </li>
-                          )),
+                          ),
+                        ),
                       )}
                     </ul>
                   )}
@@ -663,8 +604,8 @@ export function EditarUsuario() {
             ) : !usuarioCargado ? (
               <div className="mt-7 border border-[#BDC2BF] bg-white px-6 py-8">
                 <p className="text-sm text-[#3F4045]">
-                  No fue posible cargar el formulario.
-                  Comprueba tu sesión y tus permisos.
+                  No fue posible cargar el formulario. Comprueba tu sesión y tus
+                  permisos.
                 </p>
 
                 <Link
@@ -704,7 +645,6 @@ export function EditarUsuario() {
                       htmlFor="nombre-editar"
                     >
                       Nombre <span className="text-[#5D737E]">*</span>
-
                       <input
                         id="nombre-editar"
                         name="nombre"
@@ -726,12 +666,8 @@ export function EditarUsuario() {
                             : ""
                         }`}
                       />
-
                       {erroresVisibles.nombre && (
-                        <span
-                          id="nombre-editar-error"
-                          className={CLASE_ERROR}
-                        >
+                        <span id="nombre-editar-error" className={CLASE_ERROR}>
                           {mostrarMensajes(erroresVisibles.nombre)}
                         </span>
                       )}
@@ -742,7 +678,6 @@ export function EditarUsuario() {
                       htmlFor="apellido-editar"
                     >
                       Apellido <span className="text-[#5D737E]">*</span>
-
                       <input
                         id="apellido-editar"
                         name="apellido"
@@ -764,7 +699,6 @@ export function EditarUsuario() {
                             : ""
                         }`}
                       />
-
                       {erroresVisibles.apellido && (
                         <span
                           id="apellido-editar-error"
@@ -781,7 +715,6 @@ export function EditarUsuario() {
                     >
                       Correo electrónico / nombre de usuario{" "}
                       <span className="text-[#5D737E]">*</span>
-
                       <input
                         id="correo-editar"
                         name="correo"
@@ -804,12 +737,8 @@ export function EditarUsuario() {
                         }`}
                         placeholder="nombre@institucion.edu"
                       />
-
                       {erroresVisibles.correo && (
-                        <span
-                          id="correo-editar-error"
-                          className={CLASE_ERROR}
-                        >
+                        <span id="correo-editar-error" className={CLASE_ERROR}>
                           {mostrarMensajes(erroresVisibles.correo)}
                         </span>
                       )}
@@ -821,7 +750,6 @@ export function EditarUsuario() {
                     >
                       Institución o afiliación{" "}
                       <span className="text-[#5D737E]">*</span>
-
                       <input
                         id="institucion-editar"
                         name="institucion"
@@ -844,7 +772,6 @@ export function EditarUsuario() {
                         }`}
                         placeholder="Universidad o centro de investigación"
                       />
-
                       {erroresVisibles.institucion && (
                         <span
                           id="institucion-editar-error"
@@ -860,14 +787,13 @@ export function EditarUsuario() {
                 {puedeGestionarRoles && (
                   <section
                     aria-labelledby="roles-editar"
-                    className="border-y border-[#BDC2BF] py-6"
+                    className="border-y border-[#BDC2BF]/70 py-7"
                   >
                     <h3
                       id="roles-editar"
-                      className="font-display text-lg font-bold"
+                      className="font-display text-lg font-bold tracking-tight text-[#02111B]"
                     >
-                      Roles asignados{" "}
-                      <span className="text-[#5D737E]">*</span>
+                      Roles asignados <span className="text-[#5D737E]">*</span>
                     </h3>
 
                     <p className="mt-1 text-sm text-[#3F4045]">
@@ -878,33 +804,35 @@ export function EditarUsuario() {
                       {rolesPermitidos.map((rol) => (
                         <label
                           key={rol.codigo}
-                          className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${
+                          className={`group relative flex min-h-13 cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 transition-all duration-200 select-none active:scale-[0.985] ${
                             erroresVisibles.roles
-                              ? "border-red-700 bg-red-50"
+                              ? "border-red-600/80 bg-red-50/90 text-red-950 shadow-xs"
                               : rolesSeleccionados.includes(rol.codigo)
-                                ? "border-[#5D737E] bg-[#E3E7D3]"
-                                : "border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]"
+                                ? "border-[#02111B] bg-gradient-to-br from-white via-white to-[#E3E7D3]/55 text-[#02111B] shadow-sm ring-2 ring-[#02111B]/10"
+                                : "border-[#BDC2BF]/70 bg-white text-[#3F4045] shadow-2xs hover:-translate-y-0.5 hover:border-[#5D737E] hover:shadow-sm"
                           }`}
                         >
                           <input
                             type="checkbox"
-                            checked={rolesSeleccionados.includes(
-                              rol.codigo,
-                            )}
+                            checked={rolesSeleccionados.includes(rol.codigo)}
                             onChange={() => alternarRol(rol.codigo)}
                             onBlur={() => validarCampo("roles")}
-                            aria-invalid={Boolean(
-                              erroresVisibles.roles,
-                            )}
+                            aria-invalid={Boolean(erroresVisibles.roles)}
                             aria-describedby={
                               erroresVisibles.roles
                                 ? "roles-editar-error"
                                 : undefined
                             }
-                            className="checkbox checkbox-primary mt-0.5 rounded-none"
+                            className="checkbox checkbox-sm shrink-0 rounded-md border-2 border-[#5D737E]/50 bg-white shadow-2xs transition-all duration-150 checked:border-[#02111B] checked:bg-[#02111B] checked:text-[#E6E49F] group-hover:border-[#02111B]"
                           />
 
-                          <span className="text-sm font-semibold">
+                          <span
+                            className={`text-sm tracking-tight transition-colors ${
+                              rolesSeleccionados.includes(rol.codigo)
+                                ? "font-bold text-[#02111B]"
+                                : "font-medium text-[#02111B]/80 group-hover:text-[#02111B]"
+                            }`}
+                          >
                             {rol.nombre}
                           </span>
                         </label>
@@ -912,10 +840,7 @@ export function EditarUsuario() {
                     </div>
 
                     {erroresVisibles.roles && (
-                      <p
-                        id="roles-editar-error"
-                        className={CLASE_ERROR}
-                      >
+                      <p id="roles-editar-error" className={CLASE_ERROR}>
                         {mostrarMensajes(erroresVisibles.roles)}
                       </p>
                     )}
@@ -933,8 +858,8 @@ export function EditarUsuario() {
                       </h3>
 
                       <p className="mt-1 text-sm text-[#3F4045]">
-                        Opcional. Escribe una nueva contraseña únicamente
-                        cuando desees cambiarla.
+                        Opcional. Escribe una nueva contraseña únicamente cuando
+                        desees cambiarla.
                       </p>
                     </div>
 
@@ -957,7 +882,6 @@ export function EditarUsuario() {
                       htmlFor="contrasena-editar-input"
                     >
                       Nueva contraseña
-
                       <input
                         id="contrasena-editar-input"
                         name="contrasena"
@@ -966,9 +890,7 @@ export function EditarUsuario() {
                         value={formulario.contrasena}
                         onChange={actualizarCampo}
                         onBlur={() => validarCampo("contrasena")}
-                        aria-invalid={Boolean(
-                          erroresVisibles.contrasena,
-                        )}
+                        aria-invalid={Boolean(erroresVisibles.contrasena)}
                         aria-describedby={
                           erroresVisibles.contrasena
                             ? "contrasena-editar-error"
@@ -980,15 +902,12 @@ export function EditarUsuario() {
                             : ""
                         }`}
                       />
-
                       {erroresVisibles.contrasena && (
                         <span
                           id="contrasena-editar-error"
                           className={CLASE_ERROR}
                         >
-                          {mostrarMensajes(
-                            erroresVisibles.contrasena,
-                          )}
+                          {mostrarMensajes(erroresVisibles.contrasena)}
                         </span>
                       )}
                     </label>
@@ -998,7 +917,6 @@ export function EditarUsuario() {
                       htmlFor="confirmar-contrasena-editar"
                     >
                       Confirmar nueva contraseña
-
                       <input
                         id="confirmar-contrasena-editar"
                         name="confirmarContrasena"
@@ -1006,9 +924,7 @@ export function EditarUsuario() {
                         autoComplete="new-password"
                         value={formulario.confirmarContrasena}
                         onChange={actualizarCampo}
-                        onBlur={() =>
-                          validarCampo("confirmarContrasena")
-                        }
+                        onBlur={() => validarCampo("confirmarContrasena")}
                         aria-invalid={Boolean(
                           erroresVisibles.confirmarContrasena,
                         )}
@@ -1023,15 +939,12 @@ export function EditarUsuario() {
                             : ""
                         }`}
                       />
-
                       {erroresVisibles.confirmarContrasena && (
                         <span
                           id="confirmar-contrasena-editar-error"
                           className={CLASE_ERROR}
                         >
-                          {mostrarMensajes(
-                            erroresVisibles.confirmarContrasena,
-                          )}
+                          {mostrarMensajes(erroresVisibles.confirmarContrasena)}
                         </span>
                       )}
                     </label>
@@ -1041,7 +954,7 @@ export function EditarUsuario() {
                 <div className="flex flex-col-reverse gap-3 border-t border-[#BDC2BF] pt-6 sm:flex-row sm:justify-end">
                   <Link
                     to={rutaCancelar}
-                    className="inline-flex min-h-12 items-center justify-center border border-[#5D737E] px-6 font-semibold transition hover:bg-[#E3E7D3]"
+                    className="rounded-full inline-flex min-h-12 items-center justify-center border border-[#5D737E] px-6 font-semibold transition hover:bg-[#a63f3f]/35"
                   >
                     Cancelar
                   </Link>
@@ -1049,7 +962,7 @@ export function EditarUsuario() {
                   <button
                     type="submit"
                     disabled={enviando || cargando}
-                    className="inline-flex min-h-12 cursor-pointer items-center justify-center bg-[#02111B] px-7 text-sm font-semibold text-[#FCFCFC] transition hover:bg-[#30292F] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full inline-flex min-h-12 cursor-pointer items-center justify-center bg-[#02111B] px-7 text-sm font-semibold text-[#FCFCFC] transition hover:bg-[#13293D] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {enviando
                       ? "Actualizando información..."
