@@ -198,7 +198,8 @@ export function AsignacionEvaluadores() {
           </p>
         </section>
 
-        <section className="border border-line bg-panel shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-line bg-panel shadow-sm">
+          {" "}
           {articulo && (
             <div className="border-b border-line bg-soft/30 px-5 py-4 sm:px-6">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">
@@ -216,7 +217,6 @@ export function AsignacionEvaluadores() {
               </p>
             </div>
           )}
-
           {cargando ? (
             <div role="status" className="px-6 py-16 text-center">
               <div className="mx-auto h-8 w-64 animate-pulse rounded bg-soft" />
@@ -236,73 +236,83 @@ export function AsignacionEvaluadores() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-line">
+            <div className="grid gap-4 bg-soft/20 p-5 md:grid-cols-2">
               {evaluadoresFiltrados.map((evaluador) => {
                 const seleccionado = seleccionados.includes(evaluador.id);
 
                 return (
                   <label
                     key={evaluador.id}
-                    className={`grid cursor-pointer gap-3 px-5 py-5 transition-colors sm:grid-cols-[1fr_auto] sm:items-center ${
+                    className={`group flex cursor-pointer flex-col justify-between rounded-2xl border p-5 transition-all duration-200 select-none ${
                       seleccionado
-                        ? "bg-[#E6E49F]/30"
+                        ? "border-[#02111B] bg-slate-50/90 shadow-sm ring-2 ring-[#02111B]/10"
                         : evaluador.coincide_linea_tematica
-                          ? "bg-brand/5 hover:bg-[#E6E49F]/20"
-                          : "hover:bg-soft/50"
+                          ? "border-slate-300 border-l-4 border-l-[#5D737E] bg-white hover:border-slate-400 hover:shadow-md"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-md"
                     }`}
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-fg">
-                        {evaluador.nombre}
-                      </p>
+                    <div>
+                      <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold text-[#02111B]">
+                            {evaluador.nombre}
+                          </p>
+                          <p className="mt-0.5 break-all text-xs font-medium text-[#5D737E]">
+                            {evaluador.correo}
+                          </p>
+                        </div>
 
-                      <p className="mt-1 text-sm text-muted">
-                        {evaluador.correo}
-                      </p>
+                        <input
+                          type="checkbox"
+                          checked={seleccionado}
+                          onChange={() => cambiarEvaluador(evaluador)}
+                          className="checkbox checkbox-sm mt-0.5 shrink-0 rounded-md border-2 !border-slate-400 bg-white transition-colors checked:!border-[#02111B] checked:!bg-[#02111B] checked:text-[#E6E49F] group-hover:!border-[#02111B]"
+                          aria-label={`Seleccionar a ${evaluador.nombre}`}
+                        />
+                      </div>
 
-                      <p className="mt-2 text-xs text-muted">
-                        Institución: {evaluador.institucion || "No registrada"}
-                      </p>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-[#3F4045]">
+                        <p>
+                          Institución:{" "}
+                          <span className="font-semibold text-[#02111B]">
+                            {evaluador.institucion || "No registrada"}
+                          </span>
+                        </p>
+                        <p>
+                          Artículos asignados:{" "}
+                          <span className="font-bold text-[#02111B]">
+                            {evaluador.articulos_asignados ?? 0}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
 
-                      <p className="mt-1 text-xs text-muted">
-                        Artículos asignados:{" "}
-                        {evaluador.articulos_asignados ?? 0}
-                      </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-1.5">
                       {evaluador.coincide_linea_tematica ? (
-                        <span className="mt-3 inline-flex rounded-full border border-highlight bg-panel px-3 py-1 text-xs font-bold text-highlight">
+                        <span className="inline-flex rounded-full border border-[#5D737E]/40 bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-[#02111B]">
                           Coincide con la línea temática
                         </span>
                       ) : (
-                        <span className="mt-3 inline-flex rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-muted">
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
                           Línea temática diferente
                         </span>
                       )}
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(evaluador.lineas_tematicas ?? []).length > 0 ? (
-                          evaluador.lineas_tematicas.map((linea) => (
-                            <span
-                              key={linea}
-                              className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs font-semibold text-fg"
-                            >
-                              {linea}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="rounded-full border border-line bg-soft/40 px-3 py-1 text-xs text-muted">
-                            Sin áreas registradas
+                      {(evaluador.lineas_tematicas ?? []).length > 0 ? (
+                        evaluador.lineas_tematicas.map((linea) => (
+                          <span
+                            key={linea}
+                            className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-[#3F4045]"
+                          >
+                            {linea}
                           </span>
-                        )}
-                      </div>
+                        ))
+                      ) : (
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] text-slate-400">
+                          Sin áreas registradas
+                        </span>
+                      )}
                     </div>
-
-                    <input
-                      type="checkbox"
-                      checked={seleccionado}
-                      onChange={() => cambiarEvaluador(evaluador)}
-                      className="checkbox checkbox-sm rounded-none border-highlight"
-                      aria-label={`Seleccionar a ${evaluador.nombre}`}
-                    />
                   </label>
                 );
               })}
@@ -323,7 +333,7 @@ export function AsignacionEvaluadores() {
               type="button"
               onClick={confirmarAsignacion}
               disabled={guardando || seleccionados.length !== 3}
-              className="btn min-h-12 rounded-none bg-brand px-5 font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn min-h-12 rounded-full bg-brand px-5 font-semibold text-brand-fg hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {guardando ? "Guardando..." : "Asignar evaluadores"}
             </button>
