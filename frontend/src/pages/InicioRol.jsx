@@ -221,6 +221,13 @@ export function InicioRol({ rol }) {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               {informacion.descripcion}
             </p>
+
+            <Link
+              to="/perfil/editar"
+              className="mt-7 inline-flex min-h-12 items-center justify-center border border-brand px-6 font-semibold text-brand transition hover:bg-soft"
+            >
+              Actualizar mis datos
+            </Link>
           </section>
 
           <section aria-labelledby="titulo-resumen" className="mt-10">

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { infoEstado } from "../../articulos/estados";
-import { obtenerArticulo } from "../../articulos/solicitudes";
 import { useAutenticacion } from "../../autenticacion/useAutenticacion";
+import {
+  obtenerArticulo,
+  obtenerEvaluadoresAsignados,
+} from "../../articulos/solicitudes";
 
 function formatearFecha(valor) {
   if (!valor) return "Sin fecha registrada";
@@ -87,7 +90,14 @@ function ListaVersiones({ versiones }) {
   );
 }
 
-function EstadoDetalle({ cargando, error, articulo }) {
+function EstadoDetalle({
+  cargando,
+  error,
+  articulo,
+  evaluadoresAsignados,
+  cargandoAsignados,
+  errorAsignados,
+}) {
   if (cargando) {
     return (
       <div role="status" className="space-y-4">
@@ -181,6 +191,47 @@ function EstadoDetalle({ cargando, error, articulo }) {
       </section>
 
       <section className="mt-8">
+        <h3 className="text-lg font-bold text-fg">Evaluadores asignados</h3>
+
+        {cargandoAsignados ? (
+          <p className="mt-3 text-sm text-muted">
+            Cargando evaluadores asignados…
+          </p>
+        ) : errorAsignados ? (
+          <p role="alert" className="mt-3 text-sm text-red-800">
+            {errorAsignados}
+          </p>
+        ) : evaluadoresAsignados.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">
+            Este artículo todavía no tiene evaluadores asignados.
+          </p>
+        ) : (
+          <div className="mt-3 divide-y divide-line border-y border-line">
+            {evaluadoresAsignados.map((evaluador) => (
+              <article
+                key={evaluador.id_asignacion ?? evaluador.id}
+                className="px-4 py-4"
+              >
+                <p className="font-semibold text-fg">
+                  {evaluador.nombre || "Evaluador"}
+                </p>
+
+                {evaluador.correo && (
+                  <p className="mt-1 text-sm text-muted">{evaluador.correo}</p>
+                )}
+
+                {evaluador.fecha_asignacion && (
+                  <p className="mt-1 text-xs text-muted">
+                    Asignado el: {formatearFecha(evaluador.fecha_asignacion)}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-8">
         <h3 className="text-lg font-bold text-fg">Versiones y documentos</h3>
         <div className="mt-3">
           <ListaVersiones versiones={articulo.versiones} />
@@ -215,6 +266,9 @@ export function DetalleArticuloModal({ idArticulo, alCerrar }) {
   const [articulo, establecerArticulo] = useState(null);
   const [cargando, establecerCargando] = useState(Boolean(idArticulo));
   const [error, establecerError] = useState("");
+  const [evaluadoresAsignados, establecerEvaluadoresAsignados] = useState([]);
+  const [cargandoAsignados, establecerCargandoAsignados] = useState(false);
+  const [errorAsignados, establecerErrorAsignados] = useState("");
 
   useEffect(() => {
     if (!idArticulo) {
@@ -249,6 +303,40 @@ export function DetalleArticuloModal({ idArticulo, alCerrar }) {
     };
   }, [idArticulo, sesion?.tokenAcceso]);
 
+  useEffect(() => {
+    if (!idArticulo) return undefined;
+
+    const puedeConsultar = ["ADMIN", "COMITE"].includes(sesion?.rolActivo);
+
+    if (!puedeConsultar) return undefined;
+
+    let activo = true;
+
+    obtenerEvaluadoresAsignados(sesion?.tokenAcceso, idArticulo)
+      .then((datos) => {
+        if (activo) {
+          establecerEvaluadoresAsignados(datos.evaluadores);
+        }
+      })
+      .catch((errorSolicitud) => {
+        if (activo) {
+          establecerErrorAsignados(
+            errorSolicitud instanceof Error
+              ? errorSolicitud.message
+              : "No fue posible consultar los evaluadores.",
+          );
+        }
+      })
+      .finally(() => {
+        if (activo) {
+          establecerCargandoAsignados(false);
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [idArticulo, sesion?.tokenAcceso, sesion?.rolActivo]);
   if (!idArticulo) return null;
 
   return (
@@ -282,6 +370,9 @@ export function DetalleArticuloModal({ idArticulo, alCerrar }) {
             cargando={cargando}
             error={error}
             articulo={articulo}
+            evaluadoresAsignados={evaluadoresAsignados}
+            cargandoAsignados={cargandoAsignados}
+            errorAsignados={errorAsignados}
           />
         </div>
       </div>

@@ -147,3 +147,87 @@ class VersionArticulo(models.Model):
 
     def __str__(self):
         return f"{self.id_articulo.titulo} - Versión {self.numero_version}"
+
+
+class AsignacionEvaluador(models.Model):
+    """Asociación entre un artículo y un evaluador del comité científico (HU-015, SDGC-201)."""
+
+    ESTADO_ASIGNADA = 'ASIGNADA'
+
+    id_asignacion = models.AutoField(primary_key=True)
+
+    id_articulo = models.ForeignKey(
+        Articulo,
+        on_delete=models.CASCADE,
+        db_column='id_articulo',
+        related_name='asignaciones_evaluador'
+    )
+
+    id_evaluador = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column='id_evaluador',
+        related_name='asignaciones_como_evaluador'
+    )
+
+    id_usuario_asigna = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        db_column='id_usuario_asigna',
+        related_name='asignaciones_realizadas'
+    )
+
+    fecha_asignacion = models.DateTimeField(default=timezone.now)
+    estado_asignacion = models.CharField(max_length=30, default=ESTADO_ASIGNADA)
+
+    class Meta:
+        db_table = 'asignacion_evaluador'
+        verbose_name = 'Asignación de evaluador'
+        verbose_name_plural = 'Asignaciones de evaluadores'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_articulo', 'id_evaluador'],
+                name='uq_evaluador_por_articulo'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.id_articulo.titulo} - {self.id_evaluador.email}"
+
+
+class EvaluadorLinea(models.Model):
+    """Línea temática en la que un miembro del comité tiene experiencia (HU-015, SDGC-195).
+
+    Permite relacionar la línea temática de un artículo con las áreas de conocimiento de los
+    evaluadores (CA-105A). Corresponde a la entidad EVALUADOR_LINEA del modelo de datos.
+    """
+
+    id_evaluador_linea = models.AutoField(primary_key=True)
+
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_column='id_usuario',
+        related_name='lineas_experiencia'
+    )
+
+    id_linea = models.ForeignKey(
+        'conferencias.LineaTematica',
+        on_delete=models.CASCADE,
+        db_column='id_linea',
+        related_name='evaluadores_con_experiencia'
+    )
+
+    class Meta:
+        db_table = 'evaluador_linea'
+        verbose_name = 'Línea de experiencia del evaluador'
+        verbose_name_plural = 'Líneas de experiencia de los evaluadores'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['id_usuario', 'id_linea'],
+                name='uq_linea_por_evaluador'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.id_usuario.email} - {self.id_linea.nombre}'
