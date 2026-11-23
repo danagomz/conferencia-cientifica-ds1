@@ -854,7 +854,7 @@ export function RegistroArticulo() {
                       {errors.responsableClave.message}
                     </p>
                   )}
-                  <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-sm text-slate-700">
+                  <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-sm font-semibold text-slate-700">
                     Los coautores pueden participar aunque no tengan una cuenta
                     en la plataforma.
                   </p>
