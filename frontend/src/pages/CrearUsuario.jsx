@@ -247,7 +247,7 @@ export function CrearUsuario() {
             {" "}
             <Link
               to={rutaPanel}
-              className="group inline-flex min-h-9 items-center gap-2 rounded-md px-2 -ml-2 text-sm font-semibold text-[#5D737E] transition-all duration-200 hover:bg-[#E3E7D3]/60 hover:text-[#02111B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5D737E]"
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5D737E]"
             >
               <svg
                 aria-hidden="true"
@@ -263,7 +263,7 @@ export function CrearUsuario() {
                   strokeLinejoin="round"
                 />
               </svg>
-              Volver al panel de{" "}
+              Panel de{" "}
               {sesion.rolActivo === "ADMIN" ? "administración" : "comité"}
             </Link>
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">
