@@ -222,6 +222,7 @@ function FilaUsuario({ usuario }) {
       <div className="flex items-center">
         <Link
           to={`/gestion/usuarios/${usuario.id}/editar`}
+          state={{ origen: "listado-usuarios" }}
           aria-label={`Editar usuario ${nombreCompleto || usuario.email}`}
           className="inline-flex min-h-10 items-center justify-center border rounded-full border-brand px-3 text-sm font-lightbold text-brand transition hover:bg-brand hover:text-brand-fg"
         >
