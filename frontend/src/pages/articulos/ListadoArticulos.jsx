@@ -247,17 +247,14 @@ function ListadoArticulos({ modo = "todos" }) {
 
   return (
     <div className="relative min-h-screen bg-page font-sans text-fg antialiased selection:bg-brand selection:text-brand-fg">
-      {/* Barra superior*/}
       <div className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-brand via-highlight to-brand" />
 
-      {/* Principal */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--color-soft)_0%,transparent_60%)] opacity-60" />
 
       <header className="sticky top-1 z-40 border-b border-line bg-panel/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Marca compacta />
 
-          {/*sección */}
           <div className="hidden items-center gap-2 text-xs text-muted sm:flex">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
@@ -326,7 +323,6 @@ function ListadoArticulos({ modo = "todos" }) {
 
           <span className="font-semibold text-fg">Artículos</span>
         </nav>
-        {/* Encabezado */}
         <section className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-brand">
             {config.etiqueta}
@@ -339,11 +335,9 @@ function ListadoArticulos({ modo = "todos" }) {
             {config.descripcion}
           </p>
         </section>
-        {/* Contenedor lista */}
         <section className="overflow-hidden bg-panel shadow-md">
           <div className="h-1 w-full bg-gradient-to-r from-brand via-highlight to-brand" />
 
-          {/* Filtros listado */}
           {config.conFiltros && (
             <div className="grid gap-4 border-b-2 border-line bg-soft/40 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:px-6">
               <div>
@@ -423,7 +417,6 @@ function ListadoArticulos({ modo = "todos" }) {
             </div>
           )}
 
-          {/* Títulos columnas */}
           <div
             className={`hidden gap-4 border-b border-line bg-panel px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid ${columnas}`}
           >
@@ -435,7 +428,6 @@ function ListadoArticulos({ modo = "todos" }) {
             {modo === "propios" && <span>Acciones</span>}
           </div>
 
-          {/* Cuerpo: carga, error, vacío o filas */}
           {cargando ? (
             <FilasEsqueleto
               columnas={columnas}
@@ -487,7 +479,6 @@ function ListadoArticulos({ modo = "todos" }) {
                     className={`group relative grid cursor-pointer grid-cols-1 gap-3 px-6 py-4 transition-colors hover:bg-soft/50 focus-within:bg-soft/50 sm:items-center sm:gap-4 ${columnas}`}
                   >
                     <div className="min-w-0">
-                      {/* Enlace estirado: toda la fila abre el detalle (CA existente). */}
                       <Link
                         to={`${ubicacion.pathname}?detalle=${art.id}`}
                         aria-label={`Consultar detalle de ${art.titulo}`}
@@ -585,7 +576,6 @@ function ListadoArticulos({ modo = "todos" }) {
               })}
             </div>
           )}
-          {/* Pie del listado */}
           <div className="border-t border-line bg-soft/40 px-4 py-4 text-xs text-muted sm:px-6">
             <span aria-live="polite">
               {cargando
