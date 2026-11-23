@@ -97,6 +97,7 @@ function EstadoDetalle({
   evaluadoresAsignados,
   cargandoAsignados,
   errorAsignados,
+  rolActivo,
 }) {
   if (cargando) {
     return (
@@ -190,47 +191,50 @@ function EstadoDetalle({
         </div>
       </section>
 
-      <section className="mt-8">
-        <h3 className="text-lg font-bold text-fg">Evaluadores asignados</h3>
+      {["ADMIN", "COMITE"].includes(rolActivo) && (
+        <section className="mt-8">
+          <h3 className="text-lg font-bold text-fg">Evaluadores asignados</h3>
 
-        {cargandoAsignados ? (
-          <p className="mt-3 text-sm text-muted">
-            Cargando evaluadores asignados…
-          </p>
-        ) : errorAsignados ? (
-          <p role="alert" className="mt-3 text-sm text-red-800">
-            {errorAsignados}
-          </p>
-        ) : evaluadoresAsignados.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            Este artículo todavía no tiene evaluadores asignados.
-          </p>
-        ) : (
-          <div className="mt-3 divide-y divide-line border-y border-line">
-            {evaluadoresAsignados.map((evaluador) => (
-              <article
-                key={evaluador.id_asignacion ?? evaluador.id}
-                className="px-4 py-4"
-              >
-                <p className="font-semibold text-fg">
-                  {evaluador.nombre || "Evaluador"}
-                </p>
-
-                {evaluador.correo && (
-                  <p className="mt-1 text-sm text-muted">{evaluador.correo}</p>
-                )}
-
-                {evaluador.fecha_asignacion && (
-                  <p className="mt-1 text-xs text-muted">
-                    Asignado el: {formatearFecha(evaluador.fecha_asignacion)}
+          {cargandoAsignados ? (
+            <p className="mt-3 text-sm text-muted">
+              Cargando evaluadores asignados…
+            </p>
+          ) : errorAsignados ? (
+            <p role="alert" className="mt-3 text-sm text-red-800">
+              {errorAsignados}
+            </p>
+          ) : evaluadoresAsignados.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              Este artículo todavía no tiene evaluadores asignados.
+            </p>
+          ) : (
+            <div className="mt-3 divide-y divide-line border-y border-line">
+              {evaluadoresAsignados.map((evaluador) => (
+                <article
+                  key={evaluador.id_asignacion ?? evaluador.id}
+                  className="px-4 py-4"
+                >
+                  <p className="font-semibold text-fg">
+                    {evaluador.nombre || "Evaluador"}
                   </p>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
 
+                  {evaluador.correo && (
+                    <p className="mt-1 text-sm text-muted">
+                      {evaluador.correo}
+                    </p>
+                  )}
+
+                  {evaluador.fecha_asignacion && (
+                    <p className="mt-1 text-xs text-muted">
+                      Asignado el: {formatearFecha(evaluador.fecha_asignacion)}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <section className="mt-8">
         <h3 className="text-lg font-bold text-fg">Versiones y documentos</h3>
         <div className="mt-3">
@@ -373,6 +377,7 @@ export function DetalleArticuloModal({ idArticulo, alCerrar }) {
             evaluadoresAsignados={evaluadoresAsignados}
             cargandoAsignados={cargandoAsignados}
             errorAsignados={errorAsignados}
+            rolActivo={sesion?.rolActivo}
           />
         </div>
       </div>
