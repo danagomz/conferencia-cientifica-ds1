@@ -190,7 +190,7 @@ export function CrearUsuario() {
             </span>
             <Link
               to={rutaPanel}
-              className="border border-[#5D737E] px-4 py-2 font-semibold transition hover:bg-[#E3E7D3]"
+              className="rounded-full border border-[#5D737E] px-4 py-2 font-semibold transition hover:bg-[#E6E49F]/40"
             >
               Volver al panel
             </Link>
@@ -217,29 +217,23 @@ export function CrearUsuario() {
             <h1 className="mt-5 max-w-sm font-display text-3xl font-extrabold leading-tight sm:text-4xl">
               Crear usuario
             </h1>
-            <p className="mt-4 max-w-md leading-7 text-[#BDC2BF]">
+            <p className="mt-2 max-w-md leading-7 text-[#BDC2BF]">
               Registra una cuenta institucional y asigna los roles que
               correspondan a sus responsabilidades en la conferencia.
             </p>
-            <div className="mt-8 border-l-2 border-[#E6E49F] bg-[#30292F] p-4 text-sm leading-6">
-              Esta herramienta es exclusiva para Administración y Comité
-              científico. Los roles asignables se controlan también desde el
-              servidor.
+            <div class="mt-7 inline-flex items-center rounded-2xl bg-slate-800 px-6 py-2.5 text-sm leading-snug text-white">
+              Herramienta es exclusiva para Administración y Comité científico.
             </div>
-            <div className="mt-8 border-t border-white/15 pt-6">
+            <div className="mt-10 border-t border-white/15 pt-6">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#989C94]">
-                Roles disponibles
+                Roles posibles
               </p>
-              <ul className="mt-4 space-y-3">
+              <ul className="mt-4 flex flex-wrap gap-2">
                 {rolesPermitidos.map((rol) => (
                   <li
                     key={rol.codigo}
-                    className="flex items-start gap-3 text-sm text-[#FCFCFC]"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#FCFCFC]"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="mt-2 h-1.5 w-1.5 shrink-0 bg-[#E6E49F]"
-                    />
                     {rol.nombre}
                   </li>
                 ))}
@@ -269,7 +263,7 @@ export function CrearUsuario() {
                   strokeLinejoin="round"
                 />
               </svg>
-              Panel de{" "}
+              Volver al panel de{" "}
               {sesion.rolActivo === "ADMIN" ? "administración" : "comité"}
             </Link>
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">
@@ -472,11 +466,11 @@ export function CrearUsuario() {
 
               <section
                 aria-labelledby="roles-usuario"
-                className="border-y border-[#BDC2BF] py-6"
+                className="border-y border-[#BDC2BF]/70 py-7"
               >
                 <h3
                   id="roles-usuario"
-                  className="font-display text-lg font-bold"
+                  className="font-display text-lg font-bold tracking-tight text-[#02111B]"
                 >
                   Roles asignados <span className="text-[#5D737E]">*</span>
                 </h3>
@@ -487,7 +481,7 @@ export function CrearUsuario() {
                   {rolesPermitidos.map((rol) => (
                     <label
                       key={rol.codigo}
-                      className={`flex min-h-14 cursor-pointer items-start gap-3 border p-4 transition ${erroresVisibles.roles ? "border-red-700 bg-red-50" : rolesSeleccionados.includes(rol.codigo) ? "border-[#5D737E] bg-[#E3E7D3]" : "border-[#BDC2BF] bg-white hover:bg-[#FCFCFC]"}`}
+                      className={`group relative flex min-h-13 cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 transition-all duration-200 select-none active:scale-[0.985] ${erroresVisibles.roles ? "border-red-600/80 bg-red-50/90 text-red-950 shadow-xs" : rolesSeleccionados.includes(rol.codigo) ? "border-[#02111B] bg-gradient-to-br from-white via-white to-[#E3E7D3]/55 text-[#02111B] shadow-sm ring-2 ring-[#02111B]/10" : "border-[#BDC2BF]/70 bg-white text-[#3F4045] shadow-2xs hover:-translate-y-0.5 hover:border-[#5D737E] hover:shadow-sm"}`}
                     >
                       <input
                         type="checkbox"
@@ -500,9 +494,11 @@ export function CrearUsuario() {
                             ? "roles-usuario-error"
                             : undefined
                         }
-                        className="checkbox checkbox-primary mt-0.5 rounded-none"
+                        className="checkbox checkbox-sm shrink-0 rounded-md border-2 border-[#5D737E]/50 bg-white shadow-2xs transition-all duration-150 checked:border-[#02111B] checked:bg-[#02111B] checked:text-[#E6E49F] group-hover:border-[#02111B]"
                       />
-                      <span className="text-sm font-semibold">
+                      <span
+                        className={`text-sm tracking-tight transition-colors ${rolesSeleccionados.includes(rol.codigo) ? "font-bold text-[#02111B]" : "font-medium text-[#02111B]/80 group-hover:text-[#02111B]"}`}
+                      >
                         {rol.nombre}
                       </span>
                     </label>
@@ -611,14 +607,14 @@ export function CrearUsuario() {
               <div className="flex flex-col-reverse gap-3 border-t border-[#BDC2BF] pt-6 sm:flex-row sm:justify-end">
                 <Link
                   to={rutaPanel}
-                  className="inline-flex min-h-12 items-center justify-center border border-[#5D737E] px-6 font-semibold transition hover:bg-[#E3E7D3]"
+                  className="inline-flex min-h-12 items-center justify-center border rounded-full border-[#5D737E] px-6 font-bold transition hover:bg-[#964141]/20"
                 >
                   Cancelar
                 </Link>
                 <button
                   type="submit"
                   disabled={enviando}
-                  className="min-h-12 border border-[#02111B] bg-[#02111B] px-7 font-semibold text-white transition hover:bg-[#5D737E] disabled:cursor-wait disabled:opacity-60"
+                  className="min-h-12 border rounded-full border-[#02111B] bg-[#02111B] px-7 font-semibold text-white transition hover:bg-[#5D737E] disabled:cursor-wait disabled:opacity-60"
                 >
                   {enviando ? "Registrando usuario..." : "Crear usuario"}
                 </button>
