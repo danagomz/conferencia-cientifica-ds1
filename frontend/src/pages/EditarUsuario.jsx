@@ -489,28 +489,37 @@ export function EditarUsuario() {
               {tituloFormulario}
             </h1>
             <p className="mt-2 max-w-md leading-7 text-[#BDC2BF]">
-              Modifica la información de la cuenta seleccionada según los
-              permisos de tu rol.
+              Modifica la información de la cuenta seleccionada
             </p>
-            <div className="mt-7 inline-flex items-center rounded-2xl bg-slate-800 px-6 py-3 text-sm leading-relaxed text-white">
-              Las modificaciones de roles están restringidas a los roles
-              autorizados por el sistema.
-            </div>
-            <div className="mt-10 border-t border-white/15 pt-6">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#989C94]">
-                Roles que puedes asignar
-              </p>
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {rolesPermitidos.map((rol) => (
-                  <li
-                    key={rol.codigo}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#FCFCFC]"
-                  >
-                    {rol.nombre}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {puedeGestionarRoles ? (
+              <>
+                <div className="mt-7 inline-flex items-center rounded-2xl bg-slate-800 px-6 py-3 text-sm leading-relaxed text-white">
+                  Puedes gestionar los roles de las cuentas según los permisos
+                  de tu rol.
+                </div>
+
+                <div className="mt-10 border-t border-white/15 pt-6">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#989C94]">
+                    Roles que puedes asignar
+                  </p>
+
+                  <ul className="mt-4 flex flex-wrap gap-2">
+                    {rolesPermitidos.map((rol) => (
+                      <li
+                        key={rol.codigo}
+                        className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-[#FCFCFC]"
+                      >
+                        {rol.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : sesion?.rolActivo === "AUTOR" ? (
+              <div className="mt-7 inline-flex items-center rounded-2xl bg-slate-800 px-6 py-3 text-sm leading-relaxed text-white">
+                Modifica tu información
+              </div>
+            ) : null}
           </div>
         </aside>
 
