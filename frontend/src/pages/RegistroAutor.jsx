@@ -184,16 +184,6 @@ export function RegistroAutor() {
                 </li>
               </ol>
             </div>
-
-            <div className="mt-10 flex items-start gap-3 border-l-2 border-[#E6E49F] bg-[#30292F] p-4 lg:mt-auto lg:translate-y-8">
-              <span aria-hidden="true" className="mt-0.5 text-[#E6E49F]">
-                ✦
-              </span>
-              <p className="text-sm leading-6 text-[#FCFCFC]">
-                Tu cuenta se crea con el rol de{" "}
-                <strong className="text-[#E6E49F]">Autor</strong>
-              </p>
-            </div>
           </div>
         </aside>
         <section className="px-5 py-10 sm:px-10 lg:px-14 lg:py-14">
@@ -424,7 +414,7 @@ export function RegistroAutor() {
                   <button
                     type="submit"
                     disabled={cargando}
-                    className="min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E] disabled:cursor-wait disabled:opacity-60"
+                    className="rounded-full min-h-14 bg-[#02111B] px-8 text-base font-semibold text-[#FCFCFC] transition hover:bg-[#5D737E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5D737E] disabled:cursor-wait disabled:opacity-60"
                   >
                     {cargando ? "Creando cuenta…" : "Crear cuenta de autor"}
                   </button>
