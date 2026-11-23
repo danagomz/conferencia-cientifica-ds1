@@ -518,11 +518,19 @@ export function EditarUsuario() {
           <div className="mx-auto max-w-3xl">
             <Link
               to={rutaCancelar}
-              className="text-sm font-semibold text-[#5D737E] underline underline-offset-4"
+              className="group inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
             >
-              {location.state?.origen === "listado-usuarios"
-                ? "← Volver a usuarios"
-                : "← Volver al panel"}
+              <span
+                aria-hidden="true"
+                className="text-lg leading-none transition-transform duration-200 group-hover:-translate-x-1"
+              >
+                ‹
+              </span>{" "}
+              <span className="group-hover:underline underline-offset-4">
+                {location.state?.origen === "listado-usuarios"
+                  ? "Volver a usuarios"
+                  : "Volver al panel"}
+              </span>
             </Link>
 
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">
