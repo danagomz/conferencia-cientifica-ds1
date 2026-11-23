@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import {
   actualizarUsuario,
   obtenerUsuarioPorId,
@@ -51,6 +51,7 @@ function normalizarRoles(roles) {
 
 export function EditarUsuario() {
   const { id } = useParams();
+  const location = useLocation();
 
   const { sesion, actualizarDatosUsuario } = useAutenticacion();
 
@@ -83,7 +84,12 @@ export function EditarUsuario() {
     ? ROLES_DISPONIBLES[sesion.rolActivo]?.rutaInicio
     : RUTA_ELEGIR_ROL;
 
-  const rutaCancelar = esEdicionPropia ? rutaPanel : "/gestion/usuarios";
+  const rutaCancelar =
+    location.state?.origen === "listado-usuarios"
+      ? "/gestion/usuarios"
+      : esEdicionPropia
+        ? rutaPanel
+        : "/gestion/usuarios";
 
   const [formulario, establecerFormulario] = useState(FORMULARIO_INICIAL);
 
@@ -514,7 +520,9 @@ export function EditarUsuario() {
               to={rutaCancelar}
               className="text-sm font-semibold text-[#5D737E] underline underline-offset-4"
             >
-              ← Volver al panel
+              {location.state?.origen === "listado-usuarios"
+                ? "← Volver a usuarios"
+                : "← Volver al panel"}
             </Link>
 
             <div className="mt-6 border-b border-[#BDC2BF] pb-5">
