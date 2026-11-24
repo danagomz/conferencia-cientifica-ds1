@@ -136,6 +136,8 @@ class SolicitarCodigoRecuperacionView(APIView):
                 )
             except Exception:
                 logger.exception('No se pudo enviar el PIN de recuperación.')
+                # El usuario nunca recibió este PIN, así que no se deja guardado.
+                CodigoRecuperacionContrasena.objects.filter(usuario=usuario).delete()
                 return Response(
                     {'detail': 'No se pudo enviar el correo. Intenta de nuevo más tarde.'},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
