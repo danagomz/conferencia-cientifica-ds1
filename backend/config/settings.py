@@ -140,6 +140,12 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER or 'noreply@localhost')
+# Segundos máximos de espera al enviar un correo. Sin este límite, si el servidor
+# no puede conectarse (por ejemplo, Render bloquea los puertos SMTP en el plan
+# gratuito) la solicitud del PIN se queda esperando hasta que el servidor la corta.
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
+# SDGC-108: clave de la API de Brevo, usada por usuarios.correo_brevo.BrevoEmailBackend
+BREVO_API_KEY = config('BREVO_API_KEY', default='')
 
 
 # API REST y sesión con tokens (JWT)
@@ -165,9 +171,6 @@ TURNSTILE_SECRET_KEY = config('TURNSTILE_SECRET_KEY', default='')
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_SECRET_KEY = config('SUPABASE_SECRET_KEY', default='')
 SUPABASE_BUCKET = config('SUPABASE_BUCKET', default='articulos-pdf')
-
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 # CORS: orígenes (frontend) autorizados a llamar a la API desde el navegador.
 # Lista separada por comas, p. ej. CORS_ALLOWED_ORIGINS=https://mi-app.vercel.app
